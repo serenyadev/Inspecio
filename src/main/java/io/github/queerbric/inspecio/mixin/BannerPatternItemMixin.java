@@ -24,13 +24,14 @@ import net.minecraft.item.BannerPatternItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.tag.TagKey;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
 import java.util.Optional;
 
-@ClientOnly
+@Environment(EnvType.CLIENT)
 @Mixin(BannerPatternItem.class)
 public abstract class BannerPatternItemMixin extends Item {
 	@Shadow

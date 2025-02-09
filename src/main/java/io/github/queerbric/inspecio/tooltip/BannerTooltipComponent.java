@@ -20,6 +20,7 @@ package io.github.queerbric.inspecio.tooltip;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.lighting.DiffuseLighting;
 import io.github.queerbric.inspecio.Inspecio;
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import net.minecraft.block.entity.BannerBlockEntity;
 import net.minecraft.block.entity.BannerPattern;
 import net.minecraft.client.MinecraftClient;
@@ -38,7 +39,7 @@ import net.minecraft.nbt.NbtList;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.DyeColor;
-import org.quiltmc.qsl.tooltip.api.ConvertibleTooltipData;
+import net.minecraft.client.item.TooltipData;
 
 import java.util.Optional;
 

@@ -20,12 +20,13 @@ package io.github.queerbric.inspecio.tooltip;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.SaturationTooltipMode;
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.item.FoodComponent;
 import net.minecraft.util.math.MathHelper;
-import org.quiltmc.qsl.tooltip.api.ConvertibleTooltipData;
+import net.minecraft.client.item.TooltipData;
 
 public record FoodTooltipComponent(int hunger, float saturation) implements ConvertibleTooltipData, TooltipComponent {
 	public FoodTooltipComponent(FoodComponent component) {

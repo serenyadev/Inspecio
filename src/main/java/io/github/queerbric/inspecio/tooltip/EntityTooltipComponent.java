@@ -19,6 +19,7 @@ package io.github.queerbric.inspecio.tooltip;
 
 import com.mojang.blaze3d.lighting.DiffuseLighting;
 import io.github.queerbric.inspecio.InspecioConfig;
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import io.github.queerbric.inspecio.mixin.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -38,7 +39,7 @@ import net.minecraft.entity.passive.TropicalFishEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.util.math.Axis;
-import org.quiltmc.qsl.tooltip.api.ConvertibleTooltipData;
+import net.minecraft.client.item.TooltipData;
 
 /**
  * Represents a tooltip component for entities.

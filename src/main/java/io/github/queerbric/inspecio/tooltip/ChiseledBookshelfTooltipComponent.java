@@ -19,6 +19,7 @@ package io.github.queerbric.inspecio.tooltip;
 
 import com.mojang.blaze3d.lighting.DiffuseLighting;
 import io.github.queerbric.inspecio.Inspecio;
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import io.github.queerbric.inspecio.api.InventoryProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -33,8 +34,8 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
-import org.quiltmc.qsl.tooltip.api.ConvertibleTooltipData;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
 
 import java.util.Optional;
 
@@ -45,7 +46,7 @@ import java.util.Optional;
  * @version 1.8.0
  * @since 1.7.0
  */
-@ClientOnly
+@Environment(EnvType.CLIENT)
 public class ChiseledBookshelfTooltipComponent implements ConvertibleTooltipData, TooltipComponent {
 	private static final MinecraftClient CLIENT = MinecraftClient.getInstance();
 	private final BlockState state;

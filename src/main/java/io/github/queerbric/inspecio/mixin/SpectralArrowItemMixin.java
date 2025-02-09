@@ -25,13 +25,14 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.item.ArrowItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.SpectralArrowItem;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 
 import java.util.Collections;
 import java.util.Optional;
 
-@ClientOnly
+@Environment(EnvType.CLIENT)
 @Mixin(SpectralArrowItem.class)
 public class SpectralArrowItemMixin extends ArrowItem {
 	public SpectralArrowItemMixin(Settings settings) {

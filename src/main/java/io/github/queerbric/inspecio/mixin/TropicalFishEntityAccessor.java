@@ -18,11 +18,12 @@
 package io.github.queerbric.inspecio.mixin;
 
 import net.minecraft.entity.passive.TropicalFishEntity;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@ClientOnly
+@Environment(EnvType.CLIENT)
 @Mixin(TropicalFishEntity.class)
 public interface TropicalFishEntityAccessor {
 	@Invoker

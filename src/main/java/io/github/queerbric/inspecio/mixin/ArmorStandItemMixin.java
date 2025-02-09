@@ -22,12 +22,13 @@ import net.minecraft.client.item.TooltipData;
 import net.minecraft.item.ArmorStandItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 
 import java.util.Optional;
 
-@ClientOnly
+@Environment(EnvType.CLIENT)
 @Mixin(ArmorStandItem.class)
 public class ArmorStandItemMixin extends Item {
 	public ArmorStandItemMixin(Item.Settings settings) {

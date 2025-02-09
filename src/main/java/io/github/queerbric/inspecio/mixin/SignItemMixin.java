@@ -25,12 +25,13 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.SignItem;
 import net.minecraft.item.WallStandingBlockItem;
 import net.minecraft.util.math.Direction;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 
 import java.util.Optional;
 
-@ClientOnly
+@Environment(EnvType.CLIENT)
 @Mixin(value = {SignItem.class, HangingSignItem.class})
 public class SignItemMixin extends WallStandingBlockItem {
 	public SignItemMixin(Block standingBlock, Block wallBlock, Settings settings, Direction direction) {

@@ -24,26 +24,24 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.command.CommandBuildContext;
-import net.minecraft.server.command.CommandManager;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import org.quiltmc.qsl.command.api.client.ClientCommandRegistrationCallback;
-import org.quiltmc.qsl.command.api.client.QuiltClientCommandSource;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static org.quiltmc.qsl.command.api.client.ClientCommandManager.argument;
-import static org.quiltmc.qsl.command.api.client.ClientCommandManager.literal;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 
-public final class InspecioCommand implements ClientCommandRegistrationCallback {
-	@Override
-	public void registerCommands(CommandDispatcher<QuiltClientCommandSource> dispatcher, CommandBuildContext buildContext,
-			CommandManager.RegistrationEnvironment environment) {
+public final class InspecioCommand {
+
+	public static void register(CommandDispatcher<FabricClientCommandSource> dispatcher, CommandBuildContext buildContext) {
 		var literalSubCommand = literal("config");
 
 		{
@@ -169,7 +167,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		);
 	}
 
-	private static LiteralArgumentBuilder<QuiltClientCommandSource> initContainer(String name,
+	private static LiteralArgumentBuilder<FabricClientCommandSource> initContainer(String name,
 			Function<InspecioConfig, InspecioConfig.StorageContainerConfig> containerGetter) {
 		var prefix = "containers/" + name;
 		return literal(name)
@@ -186,7 +184,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 								.executes(onBooleanSetter(prefix + "/loot_table", val -> containerGetter.apply(Inspecio.getConfig()).setLootTable(val)))));
 	}
 
-	private static LiteralArgumentBuilder<QuiltClientCommandSource> initEntity(String name,
+	private static LiteralArgumentBuilder<FabricClientCommandSource> initEntity(String name,
 			Function<InspecioConfig, InspecioConfig.EntityConfig> containerGetter) {
 		var prefix = "entities/" + name;
 		return literal(name)
@@ -207,7 +205,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		return bool ? Text.literal("true").formatted(Formatting.GREEN) : Text.literal("false").formatted(Formatting.RED);
 	}
 
-	private static Command<QuiltClientCommandSource> onInspecioCommand(LiteralCommandNode<QuiltClientCommandSource> config) {
+	private static Command<FabricClientCommandSource> onInspecioCommand(LiteralCommandNode<FabricClientCommandSource> config) {
 		var msg = Text.literal("Inspecio").formatted(Formatting.GOLD)
 				.append(Text.literal(" v" + Inspecio.getVersion() + "\n").formatted(Formatting.GRAY));
 		buildHelpCommand(config, 0, msg);
@@ -217,18 +215,18 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		};
 	}
 
-	private static void buildHelpCommand(LiteralCommandNode<QuiltClientCommandSource> node, int step, MutableText text) {
+	private static void buildHelpCommand(LiteralCommandNode<FabricClientCommandSource> node, int step, MutableText text) {
 		text.append(Text.literal('\n' + " ".repeat(step * 2) + "- ").formatted(Formatting.GRAY)
 				.append(Text.literal(node.getLiteral()).formatted(Formatting.GOLD)));
 
 		for (var child : node.getChildren()) {
 			if (child instanceof LiteralCommandNode) {
-				buildHelpCommand((LiteralCommandNode<QuiltClientCommandSource>) child, step + 1, text);
+				buildHelpCommand((LiteralCommandNode<FabricClientCommandSource>) child, step + 1, text);
 			}
 		}
 	}
 
-	private static int onSetJukebox(CommandContext<QuiltClientCommandSource> context) {
+	private static int onSetJukebox(CommandContext<FabricClientCommandSource> context) {
 		var value = JukeboxTooltipMode.JukeboxArgumentType.getJukeboxTooltipMode(context, "value");
 		var config = Inspecio.getConfig();
 		config.setJukeboxTooltipMode(value);
@@ -237,7 +235,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		return 0;
 	}
 
-	private static int onSetSaturation(CommandContext<QuiltClientCommandSource> context) {
+	private static int onSetSaturation(CommandContext<FabricClientCommandSource> context) {
 		var value = SaturationTooltipMode.SaturationArgumentType.getSaturationTooltipMode(context, "value");
 		var config = Inspecio.getConfig();
 		config.getFoodConfig().setSaturationMode(value);
@@ -246,7 +244,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		return 0;
 	}
 
-	private static int onSetSign(CommandContext<QuiltClientCommandSource> context) {
+	private static int onSetSign(CommandContext<FabricClientCommandSource> context) {
 		var value = SignTooltipMode.SignArgumentType.getSignTooltipMode(context, "value");
 		var config = Inspecio.getConfig();
 		config.setSignTooltipMode(value);
@@ -255,7 +253,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		return 0;
 	}
 
-	private static int onSetHiddenEffect(CommandContext<QuiltClientCommandSource> context) {
+	private static int onSetHiddenEffect(CommandContext<FabricClientCommandSource> context) {
 		var value = HiddenEffectMode.HiddenEffectType.getHiddenEffectMode(context, "value");
 		var config = Inspecio.getConfig().getEffectsConfig();
 		config.setHiddenEffectMode(value);
@@ -276,7 +274,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		return val -> func.accept(Inspecio.getConfig(), val);
 	}
 
-	private static <T> Command<QuiltClientCommandSource> onGetter(String path, Supplier<T> getter) {
+	private static <T> Command<FabricClientCommandSource> onGetter(String path, Supplier<T> getter) {
 		return context -> {
 			var value = getter.get();
 
@@ -291,7 +289,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		};
 	}
 
-	private static Command<QuiltClientCommandSource> onBooleanSetter(String path, Consumer<Boolean> setter) {
+	private static Command<FabricClientCommandSource> onBooleanSetter(String path, Consumer<Boolean> setter) {
 		return context -> {
 			var value = BoolArgumentType.getBool(context, "value");
 
@@ -305,7 +303,7 @@ public final class InspecioCommand implements ClientCommandRegistrationCallback 
 		};
 	}
 
-	private static Command<QuiltClientCommandSource> onIntegerSetter(String path, Consumer<Integer> setter) {
+	private static Command<FabricClientCommandSource> onIntegerSetter(String path, Consumer<Integer> setter) {
 		return context -> {
 			var value = IntegerArgumentType.getInteger(context, "value");
 

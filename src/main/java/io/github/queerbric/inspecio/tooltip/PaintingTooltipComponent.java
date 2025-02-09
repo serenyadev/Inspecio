@@ -18,6 +18,7 @@
 package io.github.queerbric.inspecio.tooltip;
 
 import io.github.queerbric.inspecio.Inspecio;
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import io.github.queerbric.inspecio.mixin.DecorationItemAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -32,8 +33,9 @@ import net.minecraft.entity.decoration.painting.PaintingVariant;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.Holder;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
-import org.quiltmc.qsl.tooltip.api.ConvertibleTooltipData;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
+import net.minecraft.client.item.TooltipData;
 
 import java.util.Optional;
 
@@ -45,7 +47,7 @@ import java.util.Optional;
  * @version 1.8.0
  * @since 1.8.0
  */
-@ClientOnly
+@Environment(EnvType.CLIENT)
 public record PaintingTooltipComponent(PaintingVariant painting) implements ConvertibleTooltipData, TooltipComponent {
 	public static Optional<TooltipData> of(ItemStack stack) {
 		if (!Inspecio.getConfig().hasPainting())

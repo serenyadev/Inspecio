@@ -18,11 +18,12 @@
 package io.github.queerbric.inspecio.mixin;
 
 import net.minecraft.client.render.Camera;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@ClientOnly
+@Environment(EnvType.CLIENT)
 @Mixin(Camera.class)
 public interface CameraAccessor {
 	@Accessor("yaw")

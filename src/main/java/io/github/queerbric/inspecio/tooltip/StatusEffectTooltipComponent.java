@@ -21,12 +21,14 @@ import com.google.common.collect.Lists;
 import com.mojang.datafixers.util.Pair;
 import io.github.queerbric.inspecio.HiddenEffectMode;
 import io.github.queerbric.inspecio.Inspecio;
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.floats.FloatList;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
+import net.minecraft.client.item.TooltipData;
 import net.minecraft.client.render.LightmapTextureManager;
 import net.minecraft.client.render.VertexConsumerProvider.Immediate;
 import net.minecraft.client.resource.language.I18n;
@@ -38,7 +40,6 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.joml.Matrix4f;
-import org.quiltmc.qsl.tooltip.api.ConvertibleTooltipData;
 
 import java.util.List;
 

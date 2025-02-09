@@ -20,13 +20,14 @@ package io.github.queerbric.inspecio.mixin;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.SuspiciousStewItem;
-import org.quiltmc.loader.api.minecraft.ClientOnly;
+import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 import java.util.function.Consumer;
 
-@ClientOnly
+@Environment(EnvType.CLIENT)
 @Mixin(SuspiciousStewItem.class)
 public interface SuspiciousStewItemAccessor {
 	@Invoker

@@ -17,8 +17,14 @@
 
 package io.github.queerbric.inspecio;
 
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import io.github.queerbric.inspecio.api.InspecioEntrypoint;
 import io.github.queerbric.inspecio.api.InventoryProvider;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.block.Block;
 import net.minecraft.block.DispenserBlock;
 import net.minecraft.block.HopperBlock;
@@ -43,11 +49,6 @@ import net.minecraft.util.random.RandomGenerator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
-import org.quiltmc.loader.api.ModContainer;
-import org.quiltmc.loader.api.QuiltLoader;
-import org.quiltmc.qsl.base.api.entrypoint.client.ClientModInitializer;
-import org.quiltmc.qsl.tag.api.QuiltTagKey;
-import org.quiltmc.qsl.tag.api.TagType;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -61,9 +62,8 @@ import java.util.function.Consumer;
 public class Inspecio implements ClientModInitializer {
 	public static final String NAMESPACE = "inspecio";
 	private static final Logger LOGGER = LogManager.getLogger(NAMESPACE);
-	public static final TagKey<Item> HIDDEN_EFFECTS_TAG = QuiltTagKey.of(
-			RegistryKeys.ITEM, new Identifier(NAMESPACE, "hidden_effects"),
-			TagType.CLIENT_FALLBACK
+	public static final TagKey<Item> HIDDEN_EFFECTS_TAG = TagKey.of(
+			RegistryKeys.ITEM, new Identifier(NAMESPACE, "hidden_effects")
 	);
 	public static final RandomGenerator COMMON_RANDOM = new LegacySimpleRandom(System.currentTimeMillis());
 	public static final Identifier GUI_ICONS_TEXTURE = new Identifier("textures/gui/icons.png");
@@ -71,8 +71,8 @@ public class Inspecio implements ClientModInitializer {
 	private static ModContainer mod;
 
 	@Override
-	public void onInitializeClient(ModContainer mod) {
-		Inspecio.mod = mod;
+	public void onInitializeClient() {
+		Inspecio.mod = FabricLoader.getInstance().getModContainer(NAMESPACE).orElseThrow();
 		reloadConfig();
 
 		InventoryProvider.register((stack, config) -> {
@@ -93,7 +93,10 @@ public class Inspecio implements ClientModInitializer {
 			return null;
 		});
 
-		var entrypoints = QuiltLoader.getEntrypoints("inspecio", InspecioEntrypoint.class);
+		TooltipComponentCallback.EVENT.register(data -> data instanceof ConvertibleTooltipData convertible ? convertible.toComponent() : null);
+		ClientCommandRegistrationCallback.EVENT.register(InspecioCommand::register);
+
+		var entrypoints = FabricLoader.getInstance().getEntrypoints("inspecio", InspecioEntrypoint.class);
 		for (var entrypoint : entrypoints) {
 			entrypoint.onInspecioInitialized();
 		}
@@ -153,7 +156,7 @@ public class Inspecio implements ClientModInitializer {
 	}
 
 	static String getVersion() {
-		var version = mod.metadata().version().raw();
+		var version = mod.getMetadata().getVersion().getFriendlyString();
 		if (version.equals("${version}"))
 			return "dev";
 		return version;

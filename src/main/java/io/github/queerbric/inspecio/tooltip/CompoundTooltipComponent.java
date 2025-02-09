@@ -18,6 +18,7 @@
 package io.github.queerbric.inspecio.tooltip;
 
 import com.google.common.collect.Lists;
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
@@ -25,7 +26,7 @@ import net.minecraft.client.render.VertexConsumerProvider.Immediate;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import org.joml.Matrix4f;
-import org.quiltmc.qsl.tooltip.api.ConvertibleTooltipData;
+import net.minecraft.client.item.TooltipData;
 
 import java.util.List;
 

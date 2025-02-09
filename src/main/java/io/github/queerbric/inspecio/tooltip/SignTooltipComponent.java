@@ -22,6 +22,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.SignTooltipMode;
+import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import net.minecraft.block.AbstractSignBlock;
 import net.minecraft.block.entity.SignText;
 import net.minecraft.client.MinecraftClient;
@@ -52,7 +53,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.SignType;
 import net.minecraft.util.math.Axis;
 import org.joml.Matrix4f;
-import org.quiltmc.qsl.tooltip.api.ConvertibleTooltipData;
+import net.minecraft.client.item.TooltipData;
 
 import java.util.Arrays;
 import java.util.Comparator;
