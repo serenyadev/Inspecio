@@ -17,8 +17,8 @@
 
 package io.github.queerbric.inspecio.mixin;
 
-import net.minecraft.entity.Entity;
 import net.fabricmc.api.Environment;
+import net.minecraft.world.entity.Entity;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -26,7 +26,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Environment(EnvType.CLIENT)
 @Mixin(Entity.class)
 public interface EntityAccessor {
-	@Accessor("touchingWater")
+	@Accessor("wasTouchingWater")
 	void setTouchingWater(boolean touchingWater);
 
 	@Accessor

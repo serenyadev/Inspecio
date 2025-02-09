@@ -20,16 +20,14 @@ package io.github.queerbric.inspecio.tooltip;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import io.github.queerbric.inspecio.mixin.ItemStackAccessor;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.client.item.TooltipData;
-
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ItemStack;
 import java.util.Optional;
 
-public class ArmorTooltipComponent implements ConvertibleTooltipData, TooltipComponent {
+public class ArmorTooltipComponent implements ConvertibleTooltipData, ClientTooltipComponent {
 	private final int prot;
 
 	public ArmorTooltipComponent(int prot) {
@@ -38,10 +36,10 @@ public class ArmorTooltipComponent implements ConvertibleTooltipData, TooltipCom
 
 	public static Optional<ArmorTooltipComponent> of(ItemStack stack) {
 		if (stack.getItem() instanceof ArmorItem armor && Inspecio.getConfig().hasArmor()) {
-			int prot = armor.getMaterial().getProtection(armor.getArmorSlot());
+			int prot = armor.getMaterial().getDefenseForType(armor.getType());
 
 			int hideFlags = ((ItemStackAccessor) (Object) stack).invokeGetHideFlags();
-			if (ItemStackAccessor.invokeIsSectionVisible(hideFlags, ItemStack.TooltipSection.MODIFIERS)) {
+			if (ItemStackAccessor.invokeIsSectionVisible(hideFlags, ItemStack.TooltipPart.MODIFIERS)) {
 				return Optional.of(new ArmorTooltipComponent(prot));
 			}
 		}
@@ -50,7 +48,7 @@ public class ArmorTooltipComponent implements ConvertibleTooltipData, TooltipCom
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -60,17 +58,17 @@ public class ArmorTooltipComponent implements ConvertibleTooltipData, TooltipCom
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return this.prot / 2 * 9;
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
 		for (int i = 0; i < this.prot / 2; i++) {
-			graphics.drawTexture(Inspecio.GUI_ICONS_TEXTURE, x + i * 9, y, 34, 9, 9, 9, 256, 256);
+			graphics.blit(Inspecio.GUI_ICONS_TEXTURE, x + i * 9, y, 34, 9, 9, 9, 256, 256);
 		}
 		if (this.prot % 2 == 1) {
-			graphics.drawTexture(Inspecio.GUI_ICONS_TEXTURE, x + this.prot / 2 * 9, y, 25, 9, 9, 9, 256, 256);
+			graphics.blit(Inspecio.GUI_ICONS_TEXTURE, x + this.prot / 2 * 9, y, 25, 9, 9, 9, 256, 256);
 		}
 	}
 }

@@ -17,14 +17,14 @@
 
 package io.github.queerbric.inspecio.mixin;
 
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(ItemStack.class)
 public interface ItemStackAccessor {
-	@Invoker
-	static boolean invokeIsSectionVisible(int flags, ItemStack.TooltipSection tooltipSection) {
+	@Invoker("shouldShowInTooltip")
+	static boolean invokeIsSectionVisible(int flags, ItemStack.TooltipPart tooltipSection) {
 		throw new IllegalStateException("Mixin injection failed.");
 	}
 

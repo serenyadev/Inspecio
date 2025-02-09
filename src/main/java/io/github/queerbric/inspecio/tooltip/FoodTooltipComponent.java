@@ -21,22 +21,21 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.SaturationTooltipMode;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.item.FoodComponent;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.client.item.TooltipData;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.util.Mth;
+import net.minecraft.world.food.FoodProperties;
 
-public record FoodTooltipComponent(int hunger, float saturation) implements ConvertibleTooltipData, TooltipComponent {
-	public FoodTooltipComponent(FoodComponent component) {
-		this(component.getHunger(), component.getHunger() * component.getSaturationModifier());
+public record FoodTooltipComponent(int hunger, float saturation) implements ConvertibleTooltipData, ClientTooltipComponent {
+	public FoodTooltipComponent(FoodProperties component) {
+		this(component.getNutrition(), component.getNutrition() * component.getSaturationModifier());
 	}
 
 	private static final int COLUMNS = 16;
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -45,7 +44,7 @@ public record FoodTooltipComponent(int hunger, float saturation) implements Conv
 		var foodConfig = Inspecio.getConfig().getFoodConfig();
 		int height = Math.max(
 				11 * this.getLines(this.getHungerChunks()),
-				11 * this.getLines(MathHelper.ceil(this.saturation))
+				11 * this.getLines(Mth.ceil(this.saturation))
 		);
 
 		if (foodConfig.hasHunger() && foodConfig.getSaturationMode() == SaturationTooltipMode.SEPARATED)
@@ -55,7 +54,7 @@ public record FoodTooltipComponent(int hunger, float saturation) implements Conv
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return Math.min(
 				Math.max(this.hunger / 2 * 9, (int) this.saturation * 9),
 				COLUMNS * 9
@@ -63,7 +62,7 @@ public record FoodTooltipComponent(int hunger, float saturation) implements Conv
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
 		var foodConfig = Inspecio.getConfig().getFoodConfig();
 
 		int saturationY = y;
@@ -77,7 +76,7 @@ public record FoodTooltipComponent(int hunger, float saturation) implements Conv
 		if (foodConfig.hasHunger()) {
 			for (int i = 0; i < (this.hunger + 1) / 2; i++) {
 				pos.wrap(i);
-				graphics.drawTexture(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 16, 27, 9, 9, 256, 256);
+				graphics.blit(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 16, 27, 9, 9, 256, 256);
 				pos.moveForward();
 			}
 		}
@@ -95,7 +94,7 @@ public record FoodTooltipComponent(int hunger, float saturation) implements Conv
 				if (this.saturation - i < 1f) {
 					width = Math.round(width * (saturation - i));
 				}
-				graphics.drawTexture(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 25, 27, width, 9, 256, 256);
+				graphics.blit(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 25, 27, width, 9, 256, 256);
 
 				pos.moveForward();
 			}
@@ -108,13 +107,13 @@ public record FoodTooltipComponent(int hunger, float saturation) implements Conv
 
 			for (int i = 0; i < this.hunger / 2; i++) {
 				pos.wrap(i);
-				graphics.drawTexture(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 52, 27, 9, 9, 256, 256);
+				graphics.blit(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 52, 27, 9, 9, 256, 256);
 				pos.moveForward();
 			}
 
 			if (this.hunger % 2 == 1) {
 				pos.wrap(this.hunger / 2);
-				graphics.drawTexture(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 61, 27, 9, 9, 256, 256);
+				graphics.blit(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 61, 27, 9, 9, 256, 256);
 			}
 		}
 
@@ -130,13 +129,13 @@ public record FoodTooltipComponent(int hunger, float saturation) implements Conv
 
 			for (int i = 0; i < intSaturation / 2; i++) {
 				pos.wrap(i);
-				graphics.drawTexture(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 52, 27, 9, 9, 256, 256);
+				graphics.blit(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 52, 27, 9, 9, 256, 256);
 				pos.moveForward();
 			}
 
 			if (intSaturation % 2 == 1) {
 				pos.wrap(intSaturation / 2);
-				graphics.drawTexture(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 61, 27, 9, 9, 256, 256);
+				graphics.blit(Inspecio.GUI_ICONS_TEXTURE, pos.x, pos.y, 61, 27, 9, 9, 256, 256);
 			}
 
 			RenderSystem.setShaderColor(1.f, 1.f, 1.f, 1.f);

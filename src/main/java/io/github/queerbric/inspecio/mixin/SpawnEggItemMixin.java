@@ -18,12 +18,12 @@
 package io.github.queerbric.inspecio.mixin;
 
 import io.github.queerbric.inspecio.tooltip.SpawnEntityTooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.SpawnEggItem;
 import net.fabricmc.api.Environment;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SpawnEggItem;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -36,14 +36,14 @@ import java.util.Optional;
 public class SpawnEggItemMixin extends Item {
 	@Shadow
 	@Final
-	private EntityType<?> type;
+	private EntityType<?> defaultType;
 
-	public SpawnEggItemMixin(Settings settings) {
+	public SpawnEggItemMixin(Properties settings) {
 		super(settings);
 	}
 
 	@Override
-	public Optional<TooltipData> getTooltipData(ItemStack stack) {
-		return SpawnEntityTooltipComponent.of(this.type, stack.getOrCreateNbt()).or(() -> super.getTooltipData(stack));
+	public Optional<TooltipComponent> getTooltipImage(ItemStack stack) {
+		return SpawnEntityTooltipComponent.of(this.defaultType, stack.getOrCreateTag()).or(() -> super.getTooltipImage(stack));
 	}
 }

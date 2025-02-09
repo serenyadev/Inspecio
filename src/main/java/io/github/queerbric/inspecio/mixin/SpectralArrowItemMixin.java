@@ -19,13 +19,13 @@ package io.github.queerbric.inspecio.mixin;
 
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.tooltip.StatusEffectTooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.item.ArrowItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.SpectralArrowItem;
 import net.fabricmc.api.Environment;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.ArrowItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SpectralArrowItem;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 
@@ -35,15 +35,15 @@ import java.util.Optional;
 @Environment(EnvType.CLIENT)
 @Mixin(SpectralArrowItem.class)
 public class SpectralArrowItemMixin extends ArrowItem {
-	public SpectralArrowItemMixin(Settings settings) {
+	public SpectralArrowItemMixin(Properties settings) {
 		super(settings);
 	}
 
 	@Override
-	public Optional<TooltipData> getTooltipData(ItemStack stack) {
-		if (!Inspecio.getConfig().getEffectsConfig().hasSpectralArrow()) return super.getTooltipData(stack);
+	public Optional<TooltipComponent> getTooltipImage(ItemStack stack) {
+		if (!Inspecio.getConfig().getEffectsConfig().hasSpectralArrow()) return super.getTooltipImage(stack);
 		return Optional.of(new StatusEffectTooltipComponent(
-				Collections.singletonList(new StatusEffectInstance(StatusEffects.GLOWING, 200, 0)),
+				Collections.singletonList(new MobEffectInstance(MobEffects.GLOWING, 200, 0)),
 				1.f
 		));
 	}

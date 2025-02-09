@@ -24,8 +24,13 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.block.*;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.BarrelBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.level.block.HopperBlock;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -249,7 +254,7 @@ public class InspecioConfig {
 		}
 
 		public @Nullable StorageContainerConfig forBlock(Block block) {
-			InspecioConfig.StorageContainerConfig config = null;
+			StorageContainerConfig config = null;
 			if (block instanceof ChestBlock
 					|| block instanceof BarrelBlock
 					|| block instanceof DispenserBlock
@@ -539,7 +544,7 @@ public class InspecioConfig {
 		}
 
 		public void setPufferFishPuffState(int pufferFishPuffState) {
-			this.pufferFishPuffState = MathHelper.clamp(pufferFishPuffState, 0, 2);
+			this.pufferFishPuffState = Mth.clamp(pufferFishPuffState, 0, 2);
 		}
 
 		public static EntitiesConfig defaultConfig() {

@@ -1,8 +1,8 @@
 package io.github.queerbric.inspecio.api;
 
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipData;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
 
-public interface ConvertibleTooltipData extends TooltipData {
-    TooltipComponent toComponent();
+public interface ConvertibleTooltipData extends TooltipComponent {
+    ClientTooltipComponent toComponent();
 }

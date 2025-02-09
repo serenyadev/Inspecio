@@ -17,18 +17,17 @@
 
 package io.github.queerbric.inspecio.tooltip;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.InspecioConfig;
 import io.github.queerbric.inspecio.mixin.EntityAccessor;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.nbt.NbtCompound;
-
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import java.util.Optional;
 
 /**
@@ -46,15 +45,15 @@ public class EntityBucketTooltipComponent extends EntityTooltipComponent<Inspeci
 		this.entity = entity;
 	}
 
-	public static Optional<TooltipData> of(EntityType<?> type, NbtCompound itemNbt) {
+	public static Optional<TooltipComponent> of(EntityType<?> type, CompoundTag itemNbt) {
 		var entitiesConfig = Inspecio.getConfig().getEntitiesConfig();
 		if (!entitiesConfig.getFishBucketConfig().isEnabled())
 			return Optional.empty();
 
-		var client = MinecraftClient.getInstance();
-		var entity = type.create(client.world);
+		var client = Minecraft.getInstance();
+		var entity = type.create(client.level);
 		if (entity != null) {
-			EntityType.loadFromEntityNbt(client.world, null, entity, itemNbt);
+			EntityType.updateCustomEntityTag(client.level, null, entity, itemNbt);
 			adjustEntity(entity, itemNbt, entitiesConfig);
 			return Optional.of(new EntityBucketTooltipComponent(entitiesConfig.getFishBucketConfig(), entity));
 		}
@@ -62,15 +61,15 @@ public class EntityBucketTooltipComponent extends EntityTooltipComponent<Inspeci
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
 		if (this.shouldRender()) {
-			MatrixStack matrices = graphics.getMatrices();
-			matrices.push();
+			PoseStack matrices = graphics.pose();
+			matrices.pushPose();
 			matrices.translate(2, 2, 0);
 			((EntityAccessor) this.entity).setTouchingWater(true);
-			this.entity.setVelocity(1.f, 1.f, 1.f);
+			this.entity.setDeltaMovement(1.f, 1.f, 1.f);
 			this.renderEntity(matrices, x + 16, y, this.entity, 0, this.config.shouldSpin(), false, 90.f);
-			matrices.pop();
+			matrices.popPose();
 		}
 	}
 

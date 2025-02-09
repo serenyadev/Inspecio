@@ -17,8 +17,8 @@
 
 package io.github.queerbric.inspecio.mixin;
 
-import net.minecraft.entity.ItemEntity;
 import net.fabricmc.api.Environment;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
@@ -28,9 +28,9 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(ItemEntity.class)
 public interface ItemEntityAccessor {
 	@Accessor
-	void setItemAge(int age);
+	void setAge(int age);
 
 	@Mutable
-	@Accessor
+	@Accessor("bobOffs")
 	void setUniqueOffset(float uniqueOffset);
 }

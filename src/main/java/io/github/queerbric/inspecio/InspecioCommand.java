@@ -26,11 +26,10 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.command.CommandBuildContext;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -47,7 +46,7 @@ public final class InspecioCommand {
 		{
 			literalSubCommand.then(literal("reload")
 					.executes(ctx -> {
-						ctx.getSource().sendFeedback(Text.translatable("inspecio.config.reloading").formatted(Formatting.GREEN));
+						ctx.getSource().sendFeedback(Component.translatable("inspecio.config.reloading").withStyle(ChatFormatting.GREEN));
 						Inspecio.reloadConfig();
 						return 0;
 					})
@@ -201,13 +200,13 @@ public final class InspecioCommand {
 								.executes(onBooleanSetter(prefix + "/spin", val -> containerGetter.apply(Inspecio.getConfig()).setSpin(val)))));
 	}
 
-	private static Text formatBoolean(boolean bool) {
-		return bool ? Text.literal("true").formatted(Formatting.GREEN) : Text.literal("false").formatted(Formatting.RED);
+	private static Component formatBoolean(boolean bool) {
+		return bool ? Component.literal("true").withStyle(ChatFormatting.GREEN) : Component.literal("false").withStyle(ChatFormatting.RED);
 	}
 
 	private static Command<FabricClientCommandSource> onInspecioCommand(LiteralCommandNode<FabricClientCommandSource> config) {
-		var msg = Text.literal("Inspecio").formatted(Formatting.GOLD)
-				.append(Text.literal(" v" + Inspecio.getVersion() + "\n").formatted(Formatting.GRAY));
+		var msg = Component.literal("Inspecio").withStyle(ChatFormatting.GOLD)
+				.append(Component.literal(" v" + Inspecio.getVersion() + "\n").withStyle(ChatFormatting.GRAY));
 		buildHelpCommand(config, 0, msg);
 		return ctx -> {
 			ctx.getSource().sendFeedback(msg);
@@ -215,9 +214,9 @@ public final class InspecioCommand {
 		};
 	}
 
-	private static void buildHelpCommand(LiteralCommandNode<FabricClientCommandSource> node, int step, MutableText text) {
-		text.append(Text.literal('\n' + " ".repeat(step * 2) + "- ").formatted(Formatting.GRAY)
-				.append(Text.literal(node.getLiteral()).formatted(Formatting.GOLD)));
+	private static void buildHelpCommand(LiteralCommandNode<FabricClientCommandSource> node, int step, MutableComponent text) {
+		text.append(Component.literal('\n' + " ".repeat(step * 2) + "- ").withStyle(ChatFormatting.GRAY)
+				.append(Component.literal(node.getLiteral()).withStyle(ChatFormatting.GOLD)));
 
 		for (var child : node.getChildren()) {
 			if (child instanceof LiteralCommandNode) {
@@ -231,7 +230,7 @@ public final class InspecioCommand {
 		var config = Inspecio.getConfig();
 		config.setJukeboxTooltipMode(value);
 		config.save();
-		context.getSource().sendFeedback(prefix("jukebox").append(Text.literal(value.toString()).formatted(Formatting.WHITE)));
+		context.getSource().sendFeedback(prefix("jukebox").append(Component.literal(value.toString()).withStyle(ChatFormatting.WHITE)));
 		return 0;
 	}
 
@@ -240,7 +239,7 @@ public final class InspecioCommand {
 		var config = Inspecio.getConfig();
 		config.getFoodConfig().setSaturationMode(value);
 		config.save();
-		context.getSource().sendFeedback(prefix("food/saturation").append(Text.literal(value.toString()).formatted(Formatting.WHITE)));
+		context.getSource().sendFeedback(prefix("food/saturation").append(Component.literal(value.toString()).withStyle(ChatFormatting.WHITE)));
 		return 0;
 	}
 
@@ -249,7 +248,7 @@ public final class InspecioCommand {
 		var config = Inspecio.getConfig();
 		config.setSignTooltipMode(value);
 		config.save();
-		context.getSource().sendFeedback(prefix("sign").append(Text.literal(value.toString()).formatted(Formatting.WHITE)));
+		context.getSource().sendFeedback(prefix("sign").append(Component.literal(value.toString()).withStyle(ChatFormatting.WHITE)));
 		return 0;
 	}
 
@@ -258,12 +257,12 @@ public final class InspecioCommand {
 		var config = Inspecio.getConfig().getEffectsConfig();
 		config.setHiddenEffectMode(value);
 		Inspecio.getConfig().save();
-		context.getSource().sendFeedback(prefix("effects/hidden_effect_mode").append(Text.literal(value.toString()).formatted(Formatting.WHITE)));
+		context.getSource().sendFeedback(prefix("effects/hidden_effect_mode").append(Component.literal(value.toString()).withStyle(ChatFormatting.WHITE)));
 		return 0;
 	}
 
-	private static MutableText prefix(String path) {
-		return Text.literal(path).formatted(Formatting.GOLD).append(Text.literal(": ").formatted(Formatting.GRAY));
+	private static MutableComponent prefix(String path) {
+		return Component.literal(path).withStyle(ChatFormatting.GOLD).append(Component.literal(": ").withStyle(ChatFormatting.GRAY));
 	}
 
 	private static <T> Supplier<T> getter(Function<InspecioConfig, T> func) {
@@ -278,10 +277,10 @@ public final class InspecioCommand {
 		return context -> {
 			var value = getter.get();
 
-			Text valueText;
+			Component valueText;
 
 			if (value instanceof Boolean boolValue) valueText = formatBoolean(boolValue);
-			else valueText = Text.literal(value.toString()).formatted(Formatting.WHITE);
+			else valueText = Component.literal(value.toString()).withStyle(ChatFormatting.WHITE);
 
 			context.getSource().sendFeedback(prefix(path).append(valueText));
 
@@ -311,7 +310,7 @@ public final class InspecioCommand {
 
 			Inspecio.getConfig().save();
 
-			context.getSource().sendFeedback(prefix(path).append(Text.literal(String.valueOf(value)).formatted(Formatting.WHITE)));
+			context.getSource().sendFeedback(prefix(path).append(Component.literal(String.valueOf(value)).withStyle(ChatFormatting.WHITE)));
 
 			return 0;
 		};

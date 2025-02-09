@@ -17,15 +17,15 @@
 
 package io.github.queerbric.inspecio.mixin;
 
-import net.minecraft.entity.passive.TropicalFishEntity;
 import net.fabricmc.api.Environment;
+import net.minecraft.world.entity.animal.TropicalFish;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Environment(EnvType.CLIENT)
-@Mixin(TropicalFishEntity.class)
+@Mixin(TropicalFish.class)
 public interface TropicalFishEntityAccessor {
-	@Invoker
+	@Invoker("setPackedVariant")
 	void invokeSetVariantId(int id);
 }

@@ -21,16 +21,23 @@ import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.InspecioConfig;
 import io.github.queerbric.inspecio.api.InventoryProvider;
 import io.github.queerbric.inspecio.tooltip.*;
-import net.minecraft.block.*;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.item.TooltipContext;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
-import net.minecraft.world.World;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BeaconBlock;
+import net.minecraft.world.level.block.BeehiveBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.ChiseledBookShelfBlock;
+import net.minecraft.world.level.block.JukeboxBlock;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.level.block.SpawnerBlock;
 import net.fabricmc.api.Environment;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
@@ -49,24 +56,24 @@ public abstract class BlockItemMixin extends Item {
 	@Shadow
 	public abstract Block getBlock();
 
-	public BlockItemMixin(Settings settings) {
+	public BlockItemMixin(Properties settings) {
 		super(settings);
 	}
 
 	@Override
-	public Optional<TooltipData> getTooltipData(ItemStack stack) {
+	public Optional<TooltipComponent> getTooltipImage(ItemStack stack) {
 		var inspecioConfig = Inspecio.getConfig();
 		var containersConfig = inspecioConfig.getContainersConfig();
 		var effectsConfig = inspecioConfig.getEffectsConfig();
 
 		if (effectsConfig.hasBeacon() && this.getBlock() instanceof BeaconBlock) {
-			var blockEntityTag = BlockItem.getBlockEntityNbtFromStack(stack);
-			var effectsList = new ArrayList<StatusEffectInstance>();
+			var blockEntityTag = BlockItem.getBlockEntityData(stack);
+			var effectsList = new ArrayList<MobEffectInstance>();
 			var primary = Inspecio.getRawEffectFromTag(blockEntityTag, "Primary");
 			var secondary = Inspecio.getRawEffectFromTag(blockEntityTag, "Secondary");
 
 			if (primary != null && primary.equals(secondary)) {
-				primary = new StatusEffectInstance(primary.getEffectType(), 200, 1);
+				primary = new MobEffectInstance(primary.getEffect(), 200, 1);
 				secondary = null;
 			}
 			if (primary != null)
@@ -87,7 +94,7 @@ public abstract class BlockItemMixin extends Item {
 		} else if (this.getBlock() instanceof SpawnerBlock) {
 			var data = SpawnEntityTooltipComponent.ofMobSpawner(stack);
 			if (data.isPresent()) return data;
-		} else if (this.getBlock() instanceof ChiseledBookshelfBlock) {
+		} else if (this.getBlock() instanceof ChiseledBookShelfBlock) {
 			var data = ChiseledBookshelfTooltipComponent.of(stack);
 			if (data.isPresent()) return data;
 		} else {
@@ -103,19 +110,19 @@ public abstract class BlockItemMixin extends Item {
 			}
 		}
 
-		return super.getTooltipData(stack);
+		return super.getTooltipImage(stack);
 	}
 
-	@Inject(method = "appendTooltip", at = @At("HEAD"), cancellable = true)
-	private void onAppendTooltip(ItemStack stack, World world, List<Text> tooltip, TooltipContext context, CallbackInfo ci) {
+	@Inject(method = "appendHoverText", at = @At("HEAD"), cancellable = true)
+	private void onAppendTooltip(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag context, CallbackInfo ci) {
 		if (this.getBlock() instanceof ShulkerBoxBlock && !Screen.hasControlDown()) {
 			Inspecio.appendBlockItemTooltip(stack, this.getBlock(), tooltip);
 			ci.cancel();
 		}
 	}
 
-	@Inject(method = "appendTooltip", at = @At("TAIL"))
-	private void onAppendTooltipEnd(ItemStack stack, World world, List<Text> tooltip, TooltipContext context, CallbackInfo ci) {
+	@Inject(method = "appendHoverText", at = @At("TAIL"))
+	private void onAppendTooltipEnd(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag context, CallbackInfo ci) {
 		Inspecio.appendBlockItemTooltip(stack, this.getBlock(), tooltip);
 	}
 }

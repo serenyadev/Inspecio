@@ -17,23 +17,23 @@
 
 package io.github.queerbric.inspecio.tooltip;
 
-import com.mojang.blaze3d.lighting.DiffuseLighting;
+import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import io.github.queerbric.inspecio.api.InventoryProvider;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.ChiseledBookshelfBlock;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChiseledBookShelfBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.fabricmc.api.Environment;
 import net.fabricmc.api.EnvType;
 
@@ -47,21 +47,21 @@ import java.util.Optional;
  * @since 1.7.0
  */
 @Environment(EnvType.CLIENT)
-public class ChiseledBookshelfTooltipComponent implements ConvertibleTooltipData, TooltipComponent {
-	private static final MinecraftClient CLIENT = MinecraftClient.getInstance();
+public class ChiseledBookshelfTooltipComponent implements ConvertibleTooltipData, ClientTooltipComponent {
+	private static final Minecraft CLIENT = Minecraft.getInstance();
 	private final BlockState state;
 
 	public ChiseledBookshelfTooltipComponent(BlockState state) {
 		this.state = state;
 	}
 
-	public static Optional<TooltipData> of(ItemStack stack) {
+	public static Optional<TooltipComponent> of(ItemStack stack) {
 		var config = Inspecio.getConfig().getContainersConfig().getChiseledBookshelfConfig();
 		if (!config.isEnabled()) {
 			return Optional.empty();
 		}
 
-		var nbt = BlockItem.getBlockEntityNbtFromStack(stack);
+		var nbt = BlockItem.getBlockEntityData(stack);
 		if (nbt == null)
 			return Optional.empty();
 
@@ -74,16 +74,16 @@ public class ChiseledBookshelfTooltipComponent implements ConvertibleTooltipData
 			return InventoryTooltipComponent.of(stack, config.isCompact(), new InventoryProvider.Context(inventory, 3));
 		}
 
-		var state = Blocks.CHISELED_BOOKSHELF.getDefaultState();
-		for (int slot = 0; slot < ChiseledBookshelfBlock.SLOT_OCCUPATION_PROPERTIES.size(); slot++) {
-			state = state.with(ChiseledBookshelfBlock.SLOT_OCCUPATION_PROPERTIES.get(slot), !inventory.get(slot).isEmpty());
+		var state = Blocks.CHISELED_BOOKSHELF.defaultBlockState();
+		for (int slot = 0; slot < ChiseledBookShelfBlock.SLOT_OCCUPIED_PROPERTIES.size(); slot++) {
+			state = state.setValue(ChiseledBookShelfBlock.SLOT_OCCUPIED_PROPERTIES.get(slot), !inventory.get(slot).isEmpty());
 		}
 
 		return Optional.of(new ChiseledBookshelfTooltipComponent(state));
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -93,23 +93,23 @@ public class ChiseledBookshelfTooltipComponent implements ConvertibleTooltipData
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return 24;
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
-		DiffuseLighting.setupInventoryEntityLighting();
-		MatrixStack matrices = graphics.getMatrices();
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
+		Lighting.setupForEntityInInventory();
+		PoseStack matrices = graphics.pose();
 		matrices.translate(x, y, 0);
 		matrices.scale(-1, -1, 1);
 		matrices.translate(-20, -20, 0);
 		matrices.scale(20, 20, 1);
-		var vertexConsumer = CLIENT.getBufferBuilders().getEntityVertexConsumers();
-		CLIENT.getBlockRenderManager().renderBlockAsEntity(this.state, matrices, vertexConsumer,
-				LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV
+		var vertexConsumer = CLIENT.renderBuffers().bufferSource();
+		CLIENT.getBlockRenderer().renderSingleBlock(this.state, matrices, vertexConsumer,
+				LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY
 		);
-		vertexConsumer.draw();
-		DiffuseLighting.setup3DGuiLighting();
+		vertexConsumer.endBatch();
+		Lighting.setupFor3DItems();
 	}
 }

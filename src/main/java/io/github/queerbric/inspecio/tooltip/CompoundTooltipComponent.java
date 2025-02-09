@@ -19,26 +19,22 @@ package io.github.queerbric.inspecio.tooltip;
 
 import com.google.common.collect.Lists;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.render.VertexConsumerProvider.Immediate;
-import net.minecraft.client.render.item.ItemRenderer;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
 import org.joml.Matrix4f;
-import net.minecraft.client.item.TooltipData;
-
 import java.util.List;
 
-public class CompoundTooltipComponent implements TooltipComponent, ConvertibleTooltipData {
-	private final List<TooltipComponent> components = Lists.newArrayList();
+public class CompoundTooltipComponent implements ClientTooltipComponent, ConvertibleTooltipData {
+	private final List<ClientTooltipComponent> components = Lists.newArrayList();
 
-	public void addComponent(TooltipComponent component) {
+	public void addComponent(ClientTooltipComponent component) {
 		components.add(component);
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -52,7 +48,7 @@ public class CompoundTooltipComponent implements TooltipComponent, ConvertibleTo
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		int width = 0;
 		for (var comp : components) {
 			if (comp.getWidth(textRenderer) > width) {
@@ -63,19 +59,19 @@ public class CompoundTooltipComponent implements TooltipComponent, ConvertibleTo
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
 		int yOff = 0;
 		for (var comp : components) {
-			comp.drawItems(textRenderer, x, y + yOff, graphics);
+			comp.renderImage(textRenderer, x, y + yOff, graphics);
 			yOff += comp.getHeight();
 		}
 	}
 
 	@Override
-	public void drawText(TextRenderer textRenderer, int x, int y, Matrix4f matrix4f, Immediate immediate) {
+	public void renderText(Font textRenderer, int x, int y, Matrix4f matrix4f, BufferSource immediate) {
 		int yOff = 0;
 		for (var comp : components) {
-			comp.drawText(textRenderer, x, y + yOff, matrix4f, immediate);
+			comp.renderText(textRenderer, x, y + yOff, matrix4f, immediate);
 			yOff += comp.getHeight();
 		}
 	}

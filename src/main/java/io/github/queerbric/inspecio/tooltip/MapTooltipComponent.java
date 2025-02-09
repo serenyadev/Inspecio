@@ -17,37 +17,35 @@
 
 package io.github.queerbric.inspecio.tooltip;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.FilledMapItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.client.item.TooltipData;
-
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.MapItem;
 import java.util.Optional;
 
-public class MapTooltipComponent implements ConvertibleTooltipData, TooltipComponent {
-	private final MinecraftClient client = MinecraftClient.getInstance();
+public class MapTooltipComponent implements ConvertibleTooltipData, ClientTooltipComponent {
+	private final Minecraft client = Minecraft.getInstance();
 	public int map;
 
 	public MapTooltipComponent(int map) {
 		this.map = map;
 	}
 
-	public static Optional<TooltipData> of(ItemStack stack) {
+	public static Optional<TooltipComponent> of(ItemStack stack) {
 		if (!Inspecio.getConfig().getFilledMapConfig().isEnabled()) return Optional.empty();
-		var map = FilledMapItem.getMapId(stack);
+		var map = MapItem.getMapId(stack);
 		return map == null ? Optional.empty() : Optional.of(new MapTooltipComponent(map));
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -57,23 +55,23 @@ public class MapTooltipComponent implements ConvertibleTooltipData, TooltipCompo
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return 128;
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
-		var vertices = this.client.getBufferBuilders().getEntityVertexConsumers();
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
+		var vertices = this.client.renderBuffers().bufferSource();
 		var map = this.client.gameRenderer.getMapRenderer();
-		var state = FilledMapItem.getMapState(this.map, this.client.world);
+		var state = MapItem.getSavedData(this.map, this.client.level);
 		if (state == null) return;
-		MatrixStack matrices = graphics.getMatrices();
-		matrices.push();
+		PoseStack matrices = graphics.pose();
+		matrices.pushPose();
 		matrices.translate(x, y, 0);
 		matrices.scale(1, 1, 0);
 		map.render(matrices, vertices, this.map, state, !Inspecio.getConfig().getFilledMapConfig().shouldShowPlayerIcon(),
-				LightmapTextureManager.MAX_LIGHT_COORDINATE);
-		vertices.draw();
-		matrices.pop();
+				LightTexture.FULL_BRIGHT);
+		vertices.endBatch();
+		matrices.popPose();
 	}
 }

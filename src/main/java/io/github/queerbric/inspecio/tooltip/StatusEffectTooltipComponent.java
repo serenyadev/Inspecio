@@ -24,38 +24,37 @@ import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.floats.FloatList;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.VertexConsumerProvider.Immediate;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.texture.StatusEffectSpriteManager;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffectUtil;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
+import net.minecraft.client.resources.MobEffectTextureManager;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffectUtil;
 import org.joml.Matrix4f;
 
 import java.util.List;
 
-public class StatusEffectTooltipComponent implements ConvertibleTooltipData, TooltipComponent {
-	private static final Identifier MYSTERY_TEXTURE = new Identifier(Inspecio.NAMESPACE, "textures/mob_effects/mystery.png");
-	private List<StatusEffectInstance> list = Lists.newArrayList();
+public class StatusEffectTooltipComponent implements ConvertibleTooltipData, ClientTooltipComponent {
+	private static final ResourceLocation MYSTERY_TEXTURE = new ResourceLocation(Inspecio.NAMESPACE, "textures/mob_effects/mystery.png");
+	private List<MobEffectInstance> list = Lists.newArrayList();
 	private final FloatList chances = new FloatArrayList();
 	private boolean hidden = false;
 	private float multiplier;
 
-	public StatusEffectTooltipComponent(List<StatusEffectInstance> list, float multiplier) {
+	public StatusEffectTooltipComponent(List<MobEffectInstance> list, float multiplier) {
 		this.list = list;
 		this.multiplier = multiplier;
 	}
 
-	public StatusEffectTooltipComponent(List<Pair<StatusEffectInstance, Float>> list) {
+	public StatusEffectTooltipComponent(List<Pair<MobEffectInstance, Float>> list) {
 		for (var pair : list) {
 			this.list.add(pair.getFirst());
 			this.chances.add(pair.getSecond().floatValue());
@@ -67,31 +66,31 @@ public class StatusEffectTooltipComponent implements ConvertibleTooltipData, Too
 		this.hidden = true;
 	}
 
-	private Text getHiddenText() {
+	private Component getHiddenText() {
 		var effectsConfig = Inspecio.getConfig().getEffectsConfig();
 		boolean hiddenMotion = effectsConfig.hasHiddenMotion();
 		HiddenEffectMode hiddenEffectMode = effectsConfig.getHiddenEffectMode();
 
-		return hiddenEffectMode.stylize(Text.literal(hiddenEffectMode.getText(true, hiddenMotion)), hiddenMotion);
+		return hiddenEffectMode.stylize(Component.literal(hiddenEffectMode.getText(true, hiddenMotion)), hiddenMotion);
 	}
 
-	private Text getHiddenTime() {
+	private Component getHiddenTime() {
 		var effectsConfig = Inspecio.getConfig().getEffectsConfig();
 		boolean hiddenMotion = effectsConfig.hasHiddenMotion();
 		HiddenEffectMode hiddenEffectMode = effectsConfig.getHiddenEffectMode();
 
 		String timeColon = hiddenEffectMode == HiddenEffectMode.ENCHANTMENT && hiddenMotion ? "i" : ":";
 
-		MutableText minutes = hiddenEffectMode.stylize(Text.literal(hiddenEffectMode.getText(false, hiddenMotion)), hiddenMotion);
-		Text seconds = minutes.copy();
+		MutableComponent minutes = hiddenEffectMode.stylize(Component.literal(hiddenEffectMode.getText(false, hiddenMotion)), hiddenMotion);
+		Component seconds = minutes.copy();
 
-		return Text.empty().append(minutes)
-				.append(hiddenEffectMode.stylize(Text.literal(timeColon), false))
+		return Component.empty().append(minutes)
+				.append(hiddenEffectMode.stylize(Component.literal(timeColon), false))
 				.append(seconds);
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -104,54 +103,54 @@ public class StatusEffectTooltipComponent implements ConvertibleTooltipData, Too
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		if (this.hidden) {
-			return 26 + textRenderer.getWidth(this.getHiddenText());
+			return 26 + textRenderer.width(this.getHiddenText());
 		}
 
 		int max = 64;
 		for (int i = 0; i < this.list.size(); i++) {
-			StatusEffectInstance statusEffectInstance = this.list.get(i);
+			MobEffectInstance statusEffectInstance = this.list.get(i);
 			String statusEffectName = this.getStatusEffectName(statusEffectInstance);
 
 			if (statusEffectInstance.getDuration() > 1) {
 				var duration = this.getDuration(i, statusEffectInstance);
-				max = Math.max(max, 26 + textRenderer.getWidth(duration));
+				max = Math.max(max, 26 + textRenderer.width(duration));
 			} else if (this.chances.size() > i && this.chances.getFloat(i) < 1f) {
 				String string2 = (int) (this.chances.getFloat(i) * 100f) + "%";
-				max = Math.max(max, 26 + textRenderer.getWidth(string2));
+				max = Math.max(max, 26 + textRenderer.width(string2));
 			}
-			max = Math.max(max, 26 + textRenderer.getWidth(statusEffectName));
+			max = Math.max(max, 26 + textRenderer.width(statusEffectName));
 		}
 		return max;
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
 		if (this.hidden) {
-			graphics.drawTexture(MYSTERY_TEXTURE, x, y, 0, 0, 18, 18, 18, 18);
+			graphics.blit(MYSTERY_TEXTURE, x, y, 0, 0, 18, 18, 18, 18);
 		} else {
-			MinecraftClient client = MinecraftClient.getInstance();
-			StatusEffectSpriteManager statusEffectSpriteManager = client.getStatusEffectSpriteManager();
+			Minecraft client = Minecraft.getInstance();
+			MobEffectTextureManager statusEffectSpriteManager = client.getMobEffectTextures();
 			for (int i = 0; i < list.size(); i++) {
-				StatusEffectInstance statusEffectInstance = list.get(i);
-				StatusEffect statusEffect = statusEffectInstance.getEffectType();
-				var sprite = statusEffectSpriteManager.getSprite(statusEffect);
-				graphics.drawSprite(x, y + i * 20, 0, 18, 18, sprite);
+				MobEffectInstance statusEffectInstance = list.get(i);
+				MobEffect statusEffect = statusEffectInstance.getEffect();
+				var sprite = statusEffectSpriteManager.get(statusEffect);
+				graphics.blit(x, y + i * 20, 0, 18, 18, sprite);
 			}
 		}
 	}
 
 	@Override
-	public void drawText(TextRenderer textRenderer, int x, int y, Matrix4f model, Immediate immediate) {
+	public void renderText(Font textRenderer, int x, int y, Matrix4f model, BufferSource immediate) {
 		if (this.hidden) {
-			textRenderer.draw(this.getHiddenText(), x + 24, y, 8355711, true,
-					model, immediate, TextRenderer.TextLayerType.NORMAL, 0, LightmapTextureManager.MAX_LIGHT_COORDINATE);
-			textRenderer.draw(this.getHiddenTime(), x + 24, y + 10, 8355711, true,
-					model, immediate, TextRenderer.TextLayerType.NORMAL, 0, LightmapTextureManager.MAX_LIGHT_COORDINATE);
+			textRenderer.drawInBatch(this.getHiddenText(), x + 24, y, 8355711, true,
+					model, immediate, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+			textRenderer.drawInBatch(this.getHiddenTime(), x + 24, y + 10, 8355711, true,
+					model, immediate, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 		} else {
 			for (int i = 0; i < this.list.size(); i++) {
-				StatusEffectInstance statusEffectInstance = this.list.get(i);
+				MobEffectInstance statusEffectInstance = this.list.get(i);
 				String statusEffectName = this.getStatusEffectName(statusEffectInstance);
 
 				int off = 0;
@@ -159,34 +158,34 @@ public class StatusEffectTooltipComponent implements ConvertibleTooltipData, Too
 					off += 5;
 				}
 
-				Integer color = statusEffectInstance.getEffectType().getType().getFormatting().getColorValue();
-				textRenderer.draw(statusEffectName, x + 24, y + i * 20 + off, color != null ? color : 16777215,
-						true, model, immediate, TextRenderer.TextLayerType.NORMAL, 0, LightmapTextureManager.MAX_LIGHT_COORDINATE);
+				Integer color = statusEffectInstance.getEffect().getCategory().getTooltipFormatting().getColor();
+				textRenderer.drawInBatch(statusEffectName, x + 24, y + i * 20 + off, color != null ? color : 16777215,
+						true, model, immediate, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 				if (statusEffectInstance.getDuration() > 1) {
 					var duration = this.getDuration(i, statusEffectInstance);
-					textRenderer.draw(duration, x + 24, y + i * 20 + 10, 8355711, true,
-							model, immediate, TextRenderer.TextLayerType.NORMAL, 0, LightmapTextureManager.MAX_LIGHT_COORDINATE);
+					textRenderer.drawInBatch(duration, x + 24, y + i * 20 + 10, 8355711, true,
+							model, immediate, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 				} else if (this.chances.size() > i && this.chances.getFloat(i) < 1f) {
 					String chance = (int) (this.chances.getFloat(i) * 100f) + "%";
-					textRenderer.draw(chance, x + 24, y + i * 20 + 10, 8355711, true,
-							model, immediate, TextRenderer.TextLayerType.NORMAL, 0, LightmapTextureManager.MAX_LIGHT_COORDINATE);
+					textRenderer.drawInBatch(chance, x + 24, y + i * 20 + 10, 8355711, true,
+							model, immediate, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 				}
 			}
 		}
 	}
 
-	private String getStatusEffectName(StatusEffectInstance statusEffectInstance) {
-		String statusEffectName = I18n.translate(statusEffectInstance.getEffectType().getTranslationKey());
+	private String getStatusEffectName(MobEffectInstance statusEffectInstance) {
+		String statusEffectName = I18n.get(statusEffectInstance.getEffect().getDescriptionId());
 
 		if (statusEffectInstance.getAmplifier() >= 1 && statusEffectInstance.getAmplifier() <= 9) {
-			statusEffectName = statusEffectName + ' ' + I18n.translate("enchantment.level." + (statusEffectInstance.getAmplifier() + 1));
+			statusEffectName = statusEffectName + ' ' + I18n.get("enchantment.level." + (statusEffectInstance.getAmplifier() + 1));
 		}
 
 		return statusEffectName;
 	}
 
-	private Text getDuration(int index, StatusEffectInstance statusEffect) {
-		var duration = StatusEffectUtil.durationToString(statusEffect, multiplier);
+	private Component getDuration(int index, MobEffectInstance statusEffect) {
+		var duration = MobEffectUtil.formatDuration(statusEffect, multiplier);
 
 		if (this.chances.size() > index && this.chances.getFloat(index) < 1f) {
 			duration = duration.copy().append(" - " + (int) (this.chances.getFloat(index) * 100f) + "%");

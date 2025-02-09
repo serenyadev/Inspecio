@@ -27,7 +27,6 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.PrimitiveCodec;
-import net.minecraft.text.Text;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -36,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import net.minecraft.network.chat.Component;
 
 /**
  * Represents the different tooltip modes for saturation.
@@ -98,7 +98,7 @@ public enum SaturationTooltipMode {
 
 	public static class SaturationArgumentType implements ArgumentType<SaturationTooltipMode> {
 		private static final SimpleCommandExceptionType UNKNOWN_VALUE = new SimpleCommandExceptionType(
-				Text.translatable("inspecio.command.error.unknown_saturation_tooltip_mode"));
+				Component.translatable("inspecio.command.error.unknown_saturation_tooltip_mode"));
 		private static final List<SaturationTooltipMode> VALUES = List.of(values());
 
 		private SaturationArgumentType() {

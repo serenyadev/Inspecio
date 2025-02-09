@@ -18,57 +18,55 @@
 package io.github.queerbric.inspecio.tooltip;
 
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.lighting.DiffuseLighting;
+import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
-import net.minecraft.block.entity.BannerBlockEntity;
-import net.minecraft.block.entity.BannerPattern;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.block.entity.BannerBlockEntityRenderer;
-import net.minecraft.client.render.entity.model.EntityModelLayers;
-import net.minecraft.client.render.model.ModelLoader;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.DyeColor;
-import net.minecraft.client.item.TooltipData;
-
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.blockentity.BannerRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.block.entity.BannerBlockEntity;
+import net.minecraft.world.level.block.entity.BannerPattern;
 import java.util.Optional;
 
-public class BannerTooltipComponent implements ConvertibleTooltipData, TooltipComponent {
-	private final MinecraftClient client = MinecraftClient.getInstance();
-	private final NbtList pattern;
+public class BannerTooltipComponent implements ConvertibleTooltipData, ClientTooltipComponent {
+	private final Minecraft client = Minecraft.getInstance();
+	private final ListTag pattern;
 	private final ModelPart bannerField;
 
-	private BannerTooltipComponent(NbtList pattern) {
+	private BannerTooltipComponent(ListTag pattern) {
 		this.pattern = pattern;
-		this.bannerField = this.client.getEntityModelLoader().getModelPart(EntityModelLayers.BANNER).getChild("flag");
+		this.bannerField = this.client.getEntityModels().bakeLayer(ModelLayers.BANNER).getChild("flag");
 	}
 
-	public static Optional<TooltipData> of(TagKey<BannerPattern> pattern) {
+	public static Optional<TooltipComponent> of(TagKey<BannerPattern> pattern) {
 		if (!Inspecio.getConfig().hasBannerPattern())
 			return Optional.empty();
 
-		var patternList = Registries.BANNER_PATTERN.getTag(pattern).map(ImmutableList::copyOf).orElse(ImmutableList.of());
-		var patterns = new BannerPattern.Patterns();
+		var patternList = BuiltInRegistries.BANNER_PATTERN.getTag(pattern).map(ImmutableList::copyOf).orElse(ImmutableList.of());
+		var patterns = new BannerPattern.Builder();
 
 		for (var p : patternList) {
-			patterns.add(p, DyeColor.WHITE);
+			patterns.addPattern(p, DyeColor.WHITE);
 		}
 
-		return Optional.of(new BannerTooltipComponent(patterns.toNbt()));
+		return Optional.of(new BannerTooltipComponent(patterns.toListTag()));
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -78,29 +76,29 @@ public class BannerTooltipComponent implements ConvertibleTooltipData, TooltipCo
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return 16;
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
-		DiffuseLighting.setupFlatGuiLighting();
-		MatrixStack matrices = graphics.getMatrices();
-		matrices.push();
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
+		Lighting.setupForFlatItems();
+		PoseStack matrices = graphics.pose();
+		matrices.pushPose();
 		matrices.translate(x + 8, y + 8, 0);
-		matrices.push();
+		matrices.pushPose();
 		matrices.translate(0.5, 16, 0);
 		matrices.scale(6, -6, 1);
 		matrices.scale(2, -2, -2);
-		var immediate = this.client.getBufferBuilders().getEntityVertexConsumers();
-		this.bannerField.pitch = 0.f;
-		this.bannerField.pivotY = -32.f;
-		var list = BannerBlockEntity.getPatternsFromNbt(DyeColor.GRAY, this.pattern);
-		BannerBlockEntityRenderer.renderCanvas(matrices, immediate, LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV,
-				this.bannerField, ModelLoader.BANNER_BASE, true, list);
-		matrices.pop();
-		immediate.draw();
-		matrices.pop();
-		DiffuseLighting.setup3DGuiLighting();
+		var immediate = this.client.renderBuffers().bufferSource();
+		this.bannerField.xRot = 0.f;
+		this.bannerField.y = -32.f;
+		var list = BannerBlockEntity.createPatterns(DyeColor.GRAY, this.pattern);
+		BannerRenderer.renderPatterns(matrices, immediate, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+				this.bannerField, ModelBakery.BANNER_BASE, true, list);
+		matrices.popPose();
+		immediate.endBatch();
+		matrices.popPose();
+		Lighting.setupFor3DItems();
 	}
 }

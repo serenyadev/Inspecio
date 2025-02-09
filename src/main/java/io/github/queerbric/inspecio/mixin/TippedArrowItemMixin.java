@@ -19,16 +19,16 @@ package io.github.queerbric.inspecio.mixin;
 
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.tooltip.StatusEffectTooltipComponent;
-import net.minecraft.client.item.TooltipContext;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.TippedArrowItem;
-import net.minecraft.potion.PotionUtil;
-import net.minecraft.text.Text;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import net.fabricmc.api.Environment;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TippedArrowItem;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.level.Level;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -45,25 +45,25 @@ public abstract class TippedArrowItemMixin extends Item {
 	@Unique
 	private final ThreadLocal<Integer> inspecio$oldTooltipLength = new ThreadLocal<>(); // ThreadLocal as REI workaround
 
-	public TippedArrowItemMixin(Settings settings) {
+	public TippedArrowItemMixin(Properties settings) {
 		super(settings);
 	}
 
-	@Inject(method = "appendTooltip", at = @At("HEAD"))
-	private void onAppendTooltipPre(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context, CallbackInfo ci) {
+	@Inject(method = "appendHoverText", at = @At("HEAD"))
+	private void onAppendTooltipPre(ItemStack stack, @Nullable Level world, List<Component> tooltip, TooltipFlag context, CallbackInfo ci) {
 		this.inspecio$oldTooltipLength.set(tooltip.size());
 	}
 
-	@Inject(method = "appendTooltip", at = @At("RETURN"))
-	private void onAppendTooltipPost(ItemStack stack, World world, List<Text> tooltip, TooltipContext context, CallbackInfo info) {
+	@Inject(method = "appendHoverText", at = @At("RETURN"))
+	private void onAppendTooltipPost(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag context, CallbackInfo info) {
 		if (Inspecio.getConfig().getEffectsConfig().hasTippedArrows()) {
 			Inspecio.removeVanillaTooltips(tooltip, this.inspecio$oldTooltipLength.get());
 		}
 	}
 
 	@Override
-	public Optional<TooltipData> getTooltipData(ItemStack stack) {
-		if (!Inspecio.getConfig().getEffectsConfig().hasTippedArrows()) return super.getTooltipData(stack);
-		return Optional.of(new StatusEffectTooltipComponent(PotionUtil.getPotionEffects(stack), 0.125F));
+	public Optional<TooltipComponent> getTooltipImage(ItemStack stack) {
+		if (!Inspecio.getConfig().getEffectsConfig().hasTippedArrows()) return super.getTooltipImage(stack);
+		return Optional.of(new StatusEffectTooltipComponent(PotionUtils.getMobEffects(stack), 0.125F));
 	}
 }

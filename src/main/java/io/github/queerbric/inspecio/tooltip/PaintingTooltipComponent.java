@@ -20,23 +20,21 @@ package io.github.queerbric.inspecio.tooltip;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import io.github.queerbric.inspecio.mixin.DecorationItemAccessor;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.client.texture.PaintingManager;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.decoration.painting.PaintingEntity;
-import net.minecraft.entity.decoration.painting.PaintingVariant;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.Holder;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.PaintingTextureManager;
+import net.minecraft.core.Holder;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.decoration.Painting;
+import net.minecraft.world.entity.decoration.PaintingVariant;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.ItemStack;
 import net.fabricmc.api.Environment;
 import net.fabricmc.api.EnvType;
-import net.minecraft.client.item.TooltipData;
-
 import java.util.Optional;
 
 /**
@@ -48,21 +46,21 @@ import java.util.Optional;
  * @since 1.8.0
  */
 @Environment(EnvType.CLIENT)
-public record PaintingTooltipComponent(PaintingVariant painting) implements ConvertibleTooltipData, TooltipComponent {
-	public static Optional<TooltipData> of(ItemStack stack) {
+public record PaintingTooltipComponent(PaintingVariant painting) implements ConvertibleTooltipData, ClientTooltipComponent {
+	public static Optional<TooltipComponent> of(ItemStack stack) {
 		if (!Inspecio.getConfig().hasPainting())
 			return Optional.empty();
 
-		NbtCompound nbt = stack.getNbt();
+		CompoundTag nbt = stack.getTag();
 
 		if (nbt != null
 				&& stack.getItem() instanceof DecorationItemAccessor decorationItem
-				&& decorationItem.getEntityType() == EntityType.PAINTING
+				&& decorationItem.getType() == EntityType.PAINTING
 		) {
 			var entityNbt = nbt.getCompound("EntityTag");
 
 			if (entityNbt != null) {
-				return PaintingEntity.parse(entityNbt)
+				return Painting.loadVariant(entityNbt)
 						.map(Holder::value)
 						.map(PaintingTooltipComponent::new);
 			}
@@ -72,7 +70,7 @@ public record PaintingTooltipComponent(PaintingVariant painting) implements Conv
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -82,14 +80,14 @@ public record PaintingTooltipComponent(PaintingVariant painting) implements Conv
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return this.painting.getWidth();
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
-		PaintingManager paintingManager = MinecraftClient.getInstance().getPaintingManager();
-		Sprite sprite = paintingManager.getPaintingSprite(this.painting);
-		graphics.drawSprite(x, y - 2, 0, this.getWidth(textRenderer), this.getHeight(), sprite);
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
+		PaintingTextureManager paintingManager = Minecraft.getInstance().getPaintingTextures();
+		TextureAtlasSprite sprite = paintingManager.get(this.painting);
+		graphics.blit(x, y - 2, 0, this.getWidth(textRenderer), this.getHeight(), sprite);
 	}
 }

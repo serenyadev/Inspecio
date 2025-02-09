@@ -17,8 +17,8 @@
 
 package io.github.queerbric.inspecio.mixin;
 
-import net.minecraft.client.render.Camera;
 import net.fabricmc.api.Environment;
+import net.minecraft.client.Camera;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -26,6 +26,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Environment(EnvType.CLIENT)
 @Mixin(Camera.class)
 public interface CameraAccessor {
-	@Accessor("yaw")
+	@Accessor("yRot")
 	void setYaw(float yaw);
 }

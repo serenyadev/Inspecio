@@ -20,15 +20,15 @@ package io.github.queerbric.inspecio.tooltip;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.InspecioConfig;
 import io.github.queerbric.inspecio.JukeboxTooltipMode;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.MusicDiscItem;
-import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.core.NonNullList;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.RecordItem;
 import org.joml.Matrix4f;
 
 import java.util.Optional;
@@ -42,19 +42,19 @@ import java.util.Optional;
  */
 public class JukeboxTooltipComponent extends InventoryTooltipComponent {
 	private final InspecioConfig config = Inspecio.getConfig();
-	private final MusicDiscItem disc;
+	private final RecordItem disc;
 
 	public JukeboxTooltipComponent(ItemStack discStack) {
-		super(DefaultedList.ofSize(1, discStack), 1, null);
-		this.disc = (MusicDiscItem) discStack.getItem();
+		super(NonNullList.withSize(1, discStack), 1, null);
+		this.disc = (RecordItem) discStack.getItem();
 	}
 
-	public static Optional<TooltipData> of(ItemStack stack) {
+	public static Optional<TooltipComponent> of(ItemStack stack) {
 		if (!Inspecio.getConfig().getJukeboxTooltipMode().isEnabled()) return Optional.empty();
-		var nbt = BlockItem.getBlockEntityNbtFromStack(stack);
+		var nbt = BlockItem.getBlockEntityData(stack);
 		if (nbt != null && nbt.contains("RecordItem")) {
-			var discStack = ItemStack.fromNbt(nbt.getCompound("RecordItem"));
-			if (discStack.getItem() instanceof MusicDiscItem)
+			var discStack = ItemStack.of(nbt.getCompound("RecordItem"));
+			if (discStack.getItem() instanceof RecordItem)
 				return Optional.of(new JukeboxTooltipComponent(discStack));
 		}
 		return Optional.empty();
@@ -69,18 +69,18 @@ public class JukeboxTooltipComponent extends InventoryTooltipComponent {
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
-		return textRenderer.getWidth(this.disc.getDescription());
+	public int getWidth(Font textRenderer) {
+		return textRenderer.width(this.disc.getDisplayName());
 	}
 
 	@Override
-	public void drawText(TextRenderer textRenderer, int x, int y, Matrix4f matrix4f, VertexConsumerProvider.Immediate immediate) {
-		textRenderer.draw(this.disc.getDescription(), x, y, 11184810, true, matrix4f, immediate, TextRenderer.TextLayerType.NORMAL, 0, LightmapTextureManager.MAX_LIGHT_COORDINATE);
+	public void renderText(Font textRenderer, int x, int y, Matrix4f matrix4f, MultiBufferSource.BufferSource immediate) {
+		textRenderer.drawInBatch(this.disc.getDisplayName(), x, y, 11184810, true, matrix4f, immediate, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
 		if (this.config.getJukeboxTooltipMode() == JukeboxTooltipMode.FANCY)
-			super.drawItems(textRenderer, x, y + 10, graphics);
+			super.renderImage(textRenderer, x, y + 10, graphics);
 	}
 }

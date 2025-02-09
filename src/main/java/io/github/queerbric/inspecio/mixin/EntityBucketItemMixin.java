@@ -18,12 +18,12 @@
 package io.github.queerbric.inspecio.mixin;
 
 import io.github.queerbric.inspecio.tooltip.EntityBucketTooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.EntityBucketItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
 import net.fabricmc.api.Environment;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.MobBucketItem;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -32,18 +32,18 @@ import org.spongepowered.asm.mixin.Shadow;
 import java.util.Optional;
 
 @Environment(EnvType.CLIENT)
-@Mixin(EntityBucketItem.class)
+@Mixin(MobBucketItem.class)
 public abstract class EntityBucketItemMixin extends Item {
 	@Shadow
 	@Final
-	private EntityType<?> entityType;
+	private EntityType<?> type;
 
-	public EntityBucketItemMixin(Settings settings) {
+	public EntityBucketItemMixin(Properties settings) {
 		super(settings);
 	}
 
 	@Override
-	public Optional<TooltipData> getTooltipData(ItemStack stack) {
-		return EntityBucketTooltipComponent.of(this.entityType, stack.getOrCreateNbt()).or(() -> super.getTooltipData(stack));
+	public Optional<TooltipComponent> getTooltipImage(ItemStack stack) {
+		return EntityBucketTooltipComponent.of(this.type, stack.getOrCreateTag()).or(() -> super.getTooltipImage(stack));
 	}
 }

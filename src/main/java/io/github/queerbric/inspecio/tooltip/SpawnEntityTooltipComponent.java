@@ -17,25 +17,24 @@
 
 package io.github.queerbric.inspecio.tooltip;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.InspecioConfig;
 import io.github.queerbric.inspecio.mixin.EntityAccessor;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.MobSpawnerLogic;
-import net.minecraft.world.World;
-
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BaseSpawner;
+import net.minecraft.world.level.Level;
 import java.util.Optional;
 
 public class SpawnEntityTooltipComponent extends EntityTooltipComponent<InspecioConfig.EntityConfig> {
@@ -46,35 +45,35 @@ public class SpawnEntityTooltipComponent extends EntityTooltipComponent<Inspecio
 		this.entity = entity;
 	}
 
-	public static Optional<TooltipData> of(EntityType<?> entityType, NbtCompound itemNbt) {
+	public static Optional<TooltipComponent> of(EntityType<?> entityType, CompoundTag itemNbt) {
 		var entitiesConfig = Inspecio.getConfig().getEntitiesConfig();
 		if (!entitiesConfig.getSpawnEggConfig().isEnabled() || entityType == null)
 			return Optional.empty();
 
-		var client = MinecraftClient.getInstance();
-		var entity = entityType.create(client.world);
+		var client = Minecraft.getInstance();
+		var entity = entityType.create(client.level);
 		if (entity != null) {
 			adjustEntity(entity, itemNbt, entitiesConfig);
 			var itemEntityNbt = itemNbt.getCompound("EntityTag").copy();
 
 			if (!itemEntityNbt.contains("VillagerData")) {
-				var villagerData = new NbtCompound();
+				var villagerData = new CompoundTag();
 				villagerData.putString("profession", "minecraft:none");
 				villagerData.putInt("level", 1);
 				villagerData.putString("type", "minecraft:plains");
 				itemEntityNbt.put("VillagerData", villagerData);
 			}
 
-			if (itemEntityNbt.contains(Entity.ID_KEY, NbtElement.STRING_TYPE)) { // The spawn egg specifies its own entity type.
-				var id = itemEntityNbt.getString(Entity.ID_KEY);
+			if (itemEntityNbt.contains(Entity.ID_TAG, Tag.TAG_STRING)) { // The spawn egg specifies its own entity type.
+				var id = itemEntityNbt.getString(Entity.ID_TAG);
 				if (id.startsWith("minecraft:")) {
 					id = id.substring(10);
 				}
 				if (id.replaceAll("[^a-z0-9/._-]", "").matches(id)) {
-					itemEntityNbt.putString(Entity.ID_KEY, id);
-					Optional<EntityType<?>> specifiedEntityType = EntityType.fromNbt(itemEntityNbt);
+					itemEntityNbt.putString(Entity.ID_TAG, id);
+					Optional<EntityType<?>> specifiedEntityType = EntityType.by(itemEntityNbt);
 					if (specifiedEntityType.isPresent()) {
-						var actualEntity = specifiedEntityType.get().create(client.world);
+						var actualEntity = specifiedEntityType.get().create(client.level);
 						if (actualEntity != null) {
 							entity = actualEntity;
 							adjustEntity(entity, itemNbt, entitiesConfig);
@@ -83,36 +82,36 @@ public class SpawnEntityTooltipComponent extends EntityTooltipComponent<Inspecio
 				}
 			}
 
-			var entityTag = entity.writeNbt(new NbtCompound());
-			var uuid = entity.getUuid();
-			entityTag.copyFrom(itemEntityNbt);
-			entity.setUuid(uuid);
-			entity.readNbt(entityTag);
+			var entityTag = entity.saveWithoutId(new CompoundTag());
+			var uuid = entity.getUUID();
+			entityTag.merge(itemEntityNbt);
+			entity.setUUID(uuid);
+			entity.load(entityTag);
 			return Optional.of(new SpawnEntityTooltipComponent(entitiesConfig.getSpawnEggConfig(), entity));
 		}
 
 		return Optional.empty();
 	}
 
-	public static Optional<TooltipData> ofMobSpawner(ItemStack stack) {
+	public static Optional<TooltipComponent> ofMobSpawner(ItemStack stack) {
 		var entitiesConfig = Inspecio.getConfig().getEntitiesConfig();
 		if (!entitiesConfig.getMobSpawnerConfig().isEnabled())
 			return Optional.empty();
 
-		var nbt = BlockItem.getBlockEntityNbtFromStack(stack);
+		var nbt = BlockItem.getBlockEntityData(stack);
 		if (nbt == null)
 			return Optional.empty();
 
-		var client = MinecraftClient.getInstance();
+		var client = Minecraft.getInstance();
 
-		var logic = new MobSpawnerLogic() {
+		var logic = new BaseSpawner() {
 			@Override
-			public void sendStatus(World world, BlockPos pos, int eventType) {
+			public void broadcastEvent(Level world, BlockPos pos, int eventType) {
 			}
 		};
-		logic.readNbt(client.world, client.player.getBlockPos(), nbt);
+		logic.load(client.level, client.player.blockPosition(), nbt);
 
-		var entity = logic.getRenderedEntity(client.world, Inspecio.COMMON_RANDOM, client.player.getBlockPos());
+		var entity = logic.getOrCreateDisplayEntity(client.level, Inspecio.COMMON_RANDOM, client.player.blockPosition());
 		if (entity != null) {
 			return Optional.of(new SpawnEntityTooltipComponent(entitiesConfig.getMobSpawnerConfig(), entity));
 		}
@@ -126,20 +125,20 @@ public class SpawnEntityTooltipComponent extends EntityTooltipComponent<Inspecio
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return 128;
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
 		if (this.shouldRender()) {
-			MatrixStack matrices = graphics.getMatrices();
-			matrices.push();
+			PoseStack matrices = graphics.pose();
+			matrices.pushPose();
 			matrices.translate(30, 0, 0);
 			((EntityAccessor) this.entity).setTouchingWater(true);
-			this.entity.setVelocity(1.f, 1.f, 1.f);
+			this.entity.setDeltaMovement(1.f, 1.f, 1.f);
 			this.renderEntity(matrices, x + 20, y + 20, this.entity, 0, this.config.shouldSpin(), true, 90.f);
-			matrices.pop();
+			matrices.popPose();
 		}
 	}
 

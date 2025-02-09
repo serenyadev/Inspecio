@@ -18,11 +18,11 @@
 package io.github.queerbric.inspecio.api;
 
 import io.github.queerbric.inspecio.InspecioConfig;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.DyeColor;
 import org.jetbrains.annotations.Nullable;
 import net.fabricmc.api.Environment;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.fabricmc.api.EnvType;
 
 import java.util.List;

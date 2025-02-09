@@ -17,92 +17,90 @@
 
 package io.github.queerbric.inspecio.tooltip;
 
-import com.mojang.blaze3d.lighting.DiffuseLighting;
+import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.SignTooltipMode;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
-import net.minecraft.block.AbstractSignBlock;
-import net.minecraft.block.entity.SignText;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipData;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.model.Model;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.TexturedRenderLayers;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.HangingSignBlockEntityRenderer;
-import net.minecraft.client.render.block.entity.SignBlockEntityRenderer;
-import net.minecraft.client.resource.Material;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.HangingSignItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.SignItem;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.blockentity.HangingSignRenderer;
+import net.minecraft.client.renderer.blockentity.SignRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.Material;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.DyeColor;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.SignType;
-import net.minecraft.util.math.Axis;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.HangingSignItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SignItem;
+import net.minecraft.world.level.block.SignBlock;
+import net.minecraft.world.level.block.entity.SignText;
+import net.minecraft.world.level.block.state.properties.WoodType;
 import org.joml.Matrix4f;
-import net.minecraft.client.item.TooltipData;
-
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Optional;
 
-public abstract class SignTooltipComponent<M extends Model> implements ConvertibleTooltipData, TooltipComponent {
-	protected static final MinecraftClient CLIENT = MinecraftClient.getInstance();
+public abstract class SignTooltipComponent<M extends Model> implements ConvertibleTooltipData, ClientTooltipComponent {
+	protected static final Minecraft CLIENT = Minecraft.getInstance();
 	private final SignTooltipMode tooltipMode = Inspecio.getConfig().getSignTooltipMode();
-	protected final SignType type;
+	protected final WoodType type;
 	private final SignText front;
 	private final SignText back;
 	protected final M model;
 
-	public SignTooltipComponent(SignType type, SignText front, SignText back, M model) {
+	public SignTooltipComponent(WoodType type, SignText front, SignText back, M model) {
 		this.type = type;
 		this.front = front;
 		this.back = back;
 		this.model = model;
 	}
 
-	public static Optional<TooltipData> fromItemStack(ItemStack stack) {
+	public static Optional<TooltipComponent> fromItemStack(ItemStack stack) {
 		if (!Inspecio.getConfig().getSignTooltipMode().isEnabled())
 			return Optional.empty();
 
 		if (stack.getItem() instanceof HangingSignItem signItem) {
 			var block = signItem.getBlock();
-			var nbt = BlockItem.getBlockEntityNbtFromStack(stack);
-			if (nbt != null) return Optional.ofNullable(fromTag(AbstractSignBlock.getSignType(block), nbt, true));
+			var nbt = BlockItem.getBlockEntityData(stack);
+			if (nbt != null) return Optional.ofNullable(fromTag(SignBlock.getWoodType(block), nbt, true));
 		} else if (stack.getItem() instanceof SignItem signItem) {
 			var block = signItem.getBlock();
-			var nbt = BlockItem.getBlockEntityNbtFromStack(stack);
-			if (nbt != null) return Optional.ofNullable(fromTag(AbstractSignBlock.getSignType(block), nbt, false));
+			var nbt = BlockItem.getBlockEntityData(stack);
+			if (nbt != null) return Optional.ofNullable(fromTag(SignBlock.getWoodType(block), nbt, false));
 		}
 		return Optional.empty();
 	}
 
-	public static SignTooltipComponent<?> fromTag(SignType type, NbtCompound nbt, boolean hanging) {
+	public static SignTooltipComponent<?> fromTag(WoodType type, CompoundTag nbt, boolean hanging) {
 		Optional<SignText> front = Optional.empty();
 		Optional<SignText> back = Optional.empty();
 
 		if (nbt.contains("front_text")) {
-			front = SignText.CODEC
+			front = SignText.DIRECT_CODEC
 					.parse(NbtOps.INSTANCE, nbt.getCompound("front_text"))
 					.resultOrPartial(s -> {})
 					.map(SignTooltipComponent::parseLines);
 		}
 
 		if (nbt.contains("back_text")) {
-			back = SignText.CODEC
+			back = SignText.DIRECT_CODEC
 					.parse(NbtOps.INSTANCE, nbt.getCompound("back_text"))
 					.resultOrPartial(s -> {})
 					.map(SignTooltipComponent::parseLines);
@@ -119,16 +117,16 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 
 	private static SignText parseLines(SignText text) {
 		for (int line = 0; line < 4; line++) {
-			Text unfilteredMessage = text.getMessage(line, false);
-			Text filteredMessage = text.getMessage(line, true);
-			text = text.withMessage(line, unfilteredMessage, filteredMessage);
+			Component unfilteredMessage = text.getMessage(line, false);
+			Component filteredMessage = text.getMessage(line, true);
+			text = text.setMessage(line, unfilteredMessage, filteredMessage);
 		}
 
 		return text;
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -141,12 +139,12 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 		else return this.front;
 	}
 
-	private Text[] getMessages() {
-		return this.getText().getMessages(MinecraftClient.getInstance().shouldFilterText());
+	private Component[] getMessages() {
+		return this.getText().getMessages(Minecraft.getInstance().isTextFilteringEnabled());
 	}
 
-	private OrderedText[] getOrderedMessages() {
-		return this.getText().getOrderedMessages(MinecraftClient.getInstance().shouldFilterText(), Text::asOrderedText);
+	private FormattedCharSequence[] getOrderedMessages() {
+		return this.getText().getRenderMessages(Minecraft.getInstance().isTextFilteringEnabled(), Component::getVisualOrderText);
 	}
 
 	@Override
@@ -159,24 +157,24 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 	protected abstract int getFancyHeight();
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		if (this.tooltipMode == SignTooltipMode.FANCY)
 			return this.getFancyWidth();
-		return Arrays.stream(this.getMessages()).map(textRenderer::getWidth).max(Comparator.naturalOrder()).orElse(94);
+		return Arrays.stream(this.getMessages()).map(textRenderer::width).max(Comparator.naturalOrder()).orElse(94);
 	}
 
 	protected abstract int getFancyWidth();
 
 	@Override
-	public void drawText(TextRenderer textRenderer, int x, int y, Matrix4f matrix4f, VertexConsumerProvider.Immediate immediate) {
+	public void renderText(Font textRenderer, int x, int y, Matrix4f matrix4f, MultiBufferSource.BufferSource immediate) {
 		if (this.tooltipMode != SignTooltipMode.FAST)
 			return;
 
 		this.drawTextAt(textRenderer, x, y, matrix4f, immediate, false);
 	}
 
-	public void drawTextAt(TextRenderer textRenderer, int x, int y, Matrix4f matrix4f, VertexConsumerProvider.Immediate immediate, boolean center) {
-		int signColor = this.getText().getColor().getSignColor();
+	public void drawTextAt(Font textRenderer, int x, int y, Matrix4f matrix4f, MultiBufferSource.BufferSource immediate, boolean center) {
+		int signColor = this.getText().getColor().getTextColor();
 		var messages = this.getOrderedMessages();
 
 		if (this.getText().hasGlowingText()) {
@@ -193,9 +191,9 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 
 			for (int i = 0; i < messages.length; i++) {
 				var text = messages[i];
-				float textX = center ? (45 - textRenderer.getWidth(text) / 2.f) : x;
-				textRenderer.drawWithOutline(text, textX, y + i * 10, signColor, outlineColor, matrix4f, immediate,
-						LightmapTextureManager.MAX_LIGHT_COORDINATE
+				float textX = center ? (45 - textRenderer.width(text) / 2.f) : x;
+				textRenderer.drawInBatch8xOutline(text, textX, y + i * 10, signColor, outlineColor, matrix4f, immediate,
+						LightTexture.FULL_BRIGHT
 				);
 			}
 		} else {
@@ -205,45 +203,45 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 
 			for (int i = 0; i < messages.length; i++) {
 				var text = messages[i];
-				float textX = center ? (45 - textRenderer.getWidth(text) / 2.f) : x;
-				textRenderer.draw(
-						text, textX, y + i * 10, signColor, false, matrix4f, immediate, TextRenderer.TextLayerType.NORMAL,
-						0, LightmapTextureManager.MAX_LIGHT_COORDINATE
+				float textX = center ? (45 - textRenderer.width(text) / 2.f) : x;
+				textRenderer.drawInBatch(
+						text, textX, y + i * 10, signColor, false, matrix4f, immediate, Font.DisplayMode.NORMAL,
+						0, LightTexture.FULL_BRIGHT
 				);
 			}
 		}
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int x, int y, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int x, int y, GuiGraphics graphics) {
 		if (this.tooltipMode != SignTooltipMode.FANCY)
 			return;
 
-		DiffuseLighting.setupFlatGuiLighting();
-		MatrixStack matrices = graphics.getMatrices();
-		matrices.push();
+		Lighting.setupForFlatItems();
+		PoseStack matrices = graphics.pose();
+		matrices.pushPose();
 		matrices.translate(x + 2, y, 0);
 
-		matrices.push();
-		var immediate = CLIENT.getBufferBuilders().getEntityVertexConsumers();
+		matrices.pushPose();
+		var immediate = CLIENT.renderBuffers().bufferSource();
 		var spriteIdentifier = this.getSignTextureId();
-		var vertexConsumer = spriteIdentifier != null ? spriteIdentifier.getVertexConsumer(immediate, this.model::getLayer) : null;
+		var vertexConsumer = spriteIdentifier != null ? spriteIdentifier.buffer(immediate, this.model::renderType) : null;
 		this.renderModel(graphics, vertexConsumer);
-		immediate.draw();
-		matrices.pop();
+		immediate.endBatch();
+		matrices.popPose();
 
 		matrices.translate(0, this.getTextOffset(), 10);
 
 		var messages = this.getOrderedMessages();
 		for (int i = 0; i < messages.length; i++) {
 			var text = messages[i];
-			graphics.drawText(textRenderer, text, (int) (45 - textRenderer.getWidth(text) / 2.f), i * 10,
-					this.getText().getColor().getSignColor(), false
+			graphics.drawString(textRenderer, text, (int) (45 - textRenderer.width(text) / 2.f), i * 10,
+					this.getText().getColor().getTextColor(), false
 			);
 		}
-		matrices.pop();
+		matrices.popPose();
 
-		DiffuseLighting.setup3DGuiLighting();
+		Lighting.setupFor3DItems();
 	}
 
 	public abstract Material getSignTextureId();
@@ -255,10 +253,10 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 	 */
 	protected abstract int getTextOffset();
 
-	public static class Sign extends SignTooltipComponent<SignBlockEntityRenderer.SignModel> {
+	public static class Sign extends SignTooltipComponent<SignRenderer.SignModel> {
 
-		public Sign(SignType type, SignText front, SignText back) {
-			super(type, front, back, SignBlockEntityRenderer.createSignModel(CLIENT.getEntityModelLoader(), type));
+		public Sign(WoodType type, SignText front, SignText back) {
+			super(type, front, back, SignRenderer.createSignModel(CLIENT.getEntityModels(), type));
 		}
 
 		@Override
@@ -273,21 +271,21 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 
 		@Override
 		public Material getSignTextureId() {
-			return TexturedRenderLayers.getSignTextureId(this.type);
+			return Sheets.getSignMaterial(this.type);
 		}
 
 		@Override
 		public void renderModel(GuiGraphics graphics, VertexConsumer vertexConsumer) {
-			graphics.getMatrices().translate(45, 56, 0);
+			graphics.pose().translate(45, 56, 0);
 
 			if (this.shouldShowBack()) {
-				graphics.getMatrices().multiply(Axis.Y_POSITIVE.rotationDegrees(180));
+				graphics.pose().mulPose(Axis.YP.rotationDegrees(180));
 			}
 
-			graphics.getMatrices().scale(65, 65, -65);
+			graphics.pose().scale(65, 65, -65);
 			this.model.stick.visible = false;
 			this.model.root.visible = true;
-			this.model.root.render(graphics.getMatrices(), vertexConsumer, LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV);
+			this.model.root.render(graphics.pose(), vertexConsumer, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
 		}
 
 		@Override
@@ -296,10 +294,10 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 		}
 	}
 
-	public static class HangingSign extends SignTooltipComponent<HangingSignBlockEntityRenderer.HangingSignModel> {
-		private final Identifier textureId = new Identifier("textures/gui/hanging_signs/" + this.type.getName() + ".png");
+	public static class HangingSign extends SignTooltipComponent<HangingSignRenderer.HangingSignModel> {
+		private final ResourceLocation textureId = new ResourceLocation("textures/gui/hanging_signs/" + this.type.name() + ".png");
 
-		public HangingSign(SignType type, SignText front, SignText back) {
+		public HangingSign(WoodType type, SignText front, SignText back) {
 			super(type, front, back, null);
 		}
 
@@ -320,10 +318,10 @@ public abstract class SignTooltipComponent<M extends Model> implements Convertib
 
 		@Override
 		public void renderModel(GuiGraphics graphics, VertexConsumer vertexConsumer) {
-			graphics.getMatrices().translate(44.5, 32, 0);
+			graphics.pose().translate(44.5, 32, 0);
 			RenderSystem.setShaderColor(1.f, 1.f, 1.f, 1.f);
-			graphics.getMatrices().scale(4.f, 4.f, 1.f);
-			graphics.drawTexture(this.textureId, -8, -8, 0.f, 0.f, 16, 16, 16, 16);
+			graphics.pose().scale(4.f, 4.f, 1.f);
+			graphics.blit(this.textureId, -8, -8, 0.f, 0.f, 16, 16, 16, 16);
 		}
 
 		@Override

@@ -18,13 +18,13 @@
 package io.github.queerbric.inspecio.mixin;
 
 import io.github.queerbric.inspecio.Inspecio;
-import net.minecraft.client.item.TooltipContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.LingeringPotionItem;
-import net.minecraft.potion.PotionUtil;
-import net.minecraft.text.Text;
-import net.minecraft.world.World;
 import net.fabricmc.api.Environment;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.LingeringPotionItem;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.level.Level;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -37,8 +37,8 @@ import java.util.List;
 @Mixin(LingeringPotionItem.class)
 public class LingeringPotionItemMixin {
 
-	@Inject(at = @At("HEAD"), method = "appendTooltip", cancellable = true)
-	public void appendTooltip(ItemStack stack, World world, List<Text> tooltip, TooltipContext context, CallbackInfo info) {
-		if (Inspecio.getConfig().getEffectsConfig().hasPotions() && !PotionUtil.getPotionEffects(stack).isEmpty()) info.cancel();
+	@Inject(at = @At("HEAD"), method = "appendHoverText", cancellable = true)
+	public void appendTooltip(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag context, CallbackInfo info) {
+		if (Inspecio.getConfig().getEffectsConfig().hasPotions() && !PotionUtils.getMobEffects(stack).isEmpty()) info.cancel();
 	}
 }

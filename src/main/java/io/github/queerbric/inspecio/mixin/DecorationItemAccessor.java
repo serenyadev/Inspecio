@@ -17,14 +17,14 @@
 
 package io.github.queerbric.inspecio.mixin;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.decoration.AbstractDecorationEntity;
-import net.minecraft.item.DecorationItem;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.item.HangingEntityItem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(DecorationItem.class)
+@Mixin(HangingEntityItem.class)
 public interface DecorationItemAccessor {
 	@Accessor
-	EntityType<? extends AbstractDecorationEntity> getEntityType();
+	EntityType<? extends HangingEntity> getType();
 }

@@ -17,15 +17,15 @@
 
 package io.github.queerbric.inspecio.mixin;
 
-import net.minecraft.entity.boss.WitherEntity;
 import net.fabricmc.api.Environment;
+import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Environment(EnvType.CLIENT)
-@Mixin(WitherEntity.class)
+@Mixin(WitherBoss.class)
 public interface WitherEntityAccessor {
-	@Accessor
+	@Accessor("yRotHeads")
 	float[] getSideHeadYaws();
 }

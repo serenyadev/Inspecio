@@ -20,18 +20,16 @@ package io.github.queerbric.inspecio.tooltip;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.client.item.TooltipData;
-
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
 import java.util.Optional;
 
 /**
@@ -41,22 +39,22 @@ import java.util.Optional;
  * @version 1.8.0
  * @since 1.1.0
  */
-public class CampfireTooltipComponent implements ConvertibleTooltipData, TooltipComponent {
-	private static final Identifier ATLAS_TEXTURE = new Identifier("textures/atlas/blocks.png");
+public class CampfireTooltipComponent implements ConvertibleTooltipData, ClientTooltipComponent {
+	private static final ResourceLocation ATLAS_TEXTURE = new ResourceLocation("textures/atlas/blocks.png");
 
-	private final DefaultedList<ItemStack> inventory;
-	private final Identifier fireTexture;
+	private final NonNullList<ItemStack> inventory;
+	private final ResourceLocation fireTexture;
 
-	public CampfireTooltipComponent(DefaultedList<ItemStack> inventory, Identifier fireTexture) {
+	public CampfireTooltipComponent(NonNullList<ItemStack> inventory, ResourceLocation fireTexture) {
 		this.inventory = inventory;
 		this.fireTexture = fireTexture;
 	}
 
-	public static Optional<TooltipData> of(ItemStack stack) {
+	public static Optional<TooltipComponent> of(ItemStack stack) {
 		if (!Inspecio.getConfig().getContainersConfig().isCampfireEnabled())
 			return Optional.empty();
 
-		var nbt = BlockItem.getBlockEntityNbtFromStack(stack);
+		var nbt = BlockItem.getBlockEntityData(stack);
 		if (nbt == null)
 			return Optional.empty();
 
@@ -65,12 +63,12 @@ public class CampfireTooltipComponent implements ConvertibleTooltipData, Tooltip
 		if (inventory == null)
 			return Optional.empty();
 
-		var itemId = Registries.ITEM.getId(stack.getItem());
-		var fireId = new Identifier(itemId.getNamespace(), "block/" + itemId.getPath() + "_fire");
+		var itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+		var fireId = new ResourceLocation(itemId.getNamespace(), "block/" + itemId.getPath() + "_fire");
 
-		var stateNbt = stack.getSubNbt(BlockItem.BLOCK_STATE_TAG_KEY);
+		var stateNbt = stack.getTagElement(BlockItem.BLOCK_STATE_TAG);
 		if (stateNbt != null && stateNbt.contains("lit")) {
-			if (stateNbt.get("lit").asString().equals("false"))
+			if (stateNbt.get("lit").getAsString().equals("false"))
 				fireId = null;
 		}
 
@@ -78,7 +76,7 @@ public class CampfireTooltipComponent implements ConvertibleTooltipData, Tooltip
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -88,12 +86,12 @@ public class CampfireTooltipComponent implements ConvertibleTooltipData, Tooltip
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return 3 * 18 + 2;
 	}
 
 	@Override
-	public void drawItems(TextRenderer textRenderer, int xOffset, int yOffset, GuiGraphics graphics) {
+	public void renderImage(Font textRenderer, int xOffset, int yOffset, GuiGraphics graphics) {
 		int x = 1 + 18 * 2;
 		int y = 1 + 18 * 2;
 
@@ -101,8 +99,8 @@ public class CampfireTooltipComponent implements ConvertibleTooltipData, Tooltip
 			var stack = this.inventory.get(i);
 
 			InventoryTooltipComponent.drawSlot(graphics, x + xOffset - 1, y + yOffset - 1, 0, null);
-			graphics.drawItem(stack, xOffset + x, yOffset + y);
-			graphics.drawItemInSlot(textRenderer, stack, xOffset + x, yOffset + y);
+			graphics.renderItem(stack, xOffset + x, yOffset + y);
+			graphics.renderItemDecorations(textRenderer, stack, xOffset + x, yOffset + y);
 
 			if (i == 1)
 				y -= 18 * 2;
@@ -115,9 +113,9 @@ public class CampfireTooltipComponent implements ConvertibleTooltipData, Tooltip
 		if (this.fireTexture != null) {
 			RenderSystem.setShaderColor(1.f, 1.f, 1.f, 1.f);
 
-			var sprite = MinecraftClient.getInstance().getSpriteAtlas(ATLAS_TEXTURE).apply(this.fireTexture);
+			var sprite = Minecraft.getInstance().getTextureAtlas(ATLAS_TEXTURE).apply(this.fireTexture);
 			if (sprite != null)
-				graphics.drawSprite(xOffset + 19, yOffset + 19, 0, 16, 16, sprite);
+				graphics.blit(xOffset + 19, yOffset + 19, 0, 16, 16, sprite);
 		}
 	}
 }

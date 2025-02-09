@@ -21,18 +21,23 @@ import io.github.queerbric.inspecio.Inspecio;
 import io.github.queerbric.inspecio.InspecioConfig;
 import io.github.queerbric.inspecio.tooltip.*;
 import net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.item.TooltipContext;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.*;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.potion.PotionUtil;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.dynamic.GlobalPos;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.CompassItem;
+import net.minecraft.world.item.HangingEntityItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SuspiciousStewItem;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.alchemy.PotionUtils;
 import org.jetbrains.annotations.Nullable;
 import net.fabricmc.api.Environment;
 import net.fabricmc.api.EnvType;
@@ -52,91 +57,91 @@ import java.util.Optional;
 @Mixin(ItemStack.class)
 public abstract class ItemStackMixin {
 	@Shadow
-	public abstract int getRepairCost();
+	public abstract int getBaseRepairCost();
 
 	@Shadow
 	public abstract Item getItem();
 
 	@Shadow
 	@Nullable
-	public abstract NbtCompound getNbt();
+	public abstract CompoundTag getTag();
 
 	@Unique
-	private final ThreadLocal<List<Text>> inspecio$tooltipList = new ThreadLocal<>();
+	private final ThreadLocal<List<Component>> inspecio$tooltipList = new ThreadLocal<>();
 
 	@Inject(
-			method = "getTooltip",
-			at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;hasCustomName()Z"),
+			method = "getTooltipLines",
+			at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;hasCustomHoverName()Z"),
 			locals = LocalCapture.CAPTURE_FAILHARD
 	)
-	private void onGetTooltipBeing(PlayerEntity player, TooltipContext context, CallbackInfoReturnable<List<Text>> cir, List<Text> list) {
+	private void onGetTooltipBeing(Player player, TooltipFlag context, CallbackInfoReturnable<List<Component>> cir, List<Component> list) {
 		this.inspecio$tooltipList.set(list);
 	}
 
 	@Inject(
-			method = "getTooltip",
+			method = "getTooltipLines",
 			at = @At(value = "RETURN")
 	)
-	private void onGetTooltip(PlayerEntity player, TooltipContext context, CallbackInfoReturnable<List<Text>> cir) {
+	private void onGetTooltip(Player player, TooltipFlag context, CallbackInfoReturnable<List<Component>> cir) {
 		var tooltip = this.inspecio$tooltipList.get();
 		InspecioConfig.AdvancedTooltipsConfig advancedTooltipsConfig = Inspecio.getConfig().getAdvancedTooltipsConfig();
 
-		if (advancedTooltipsConfig.hasLodestoneCoords() && this.getItem() instanceof CompassItem && CompassItem.hasLodestone((ItemStack) (Object) this)) {
-			var nbt = this.getNbt();
+		if (advancedTooltipsConfig.hasLodestoneCoords() && this.getItem() instanceof CompassItem && CompassItem.isLodestoneCompass((ItemStack) (Object) this)) {
+			var nbt = this.getTag();
 			assert nbt != null; // Should not be null since hasLodestone returns true.
 
 			GlobalPos globalPos = CompassItem.getLodestonePosition(nbt);
 
 			if (globalPos != null) {
-				BlockPos pos = globalPos.getPos();
-				var posText = Text.literal(String.format("X: %d, Y: %d, Z: %d", pos.getX(), pos.getY(), pos.getZ()))
-						.formatted(Formatting.GOLD);
+				BlockPos pos = globalPos.pos();
+				var posText = Component.literal(String.format("X: %d, Y: %d, Z: %d", pos.getX(), pos.getY(), pos.getZ()))
+						.withStyle(ChatFormatting.GOLD);
 
-				tooltip.add(Text.translatable("inspecio.tooltip.lodestone_compass.target", posText).formatted(Formatting.GRAY));
-				tooltip.add(Text.translatable("inspecio.tooltip.lodestone_compass.dimension",
-								Text.literal(globalPos.getDimension().getValue().toString()).formatted(Formatting.GOLD))
-						.formatted(Formatting.GRAY));
+				tooltip.add(Component.translatable("inspecio.tooltip.lodestone_compass.target", posText).withStyle(ChatFormatting.GRAY));
+				tooltip.add(Component.translatable("inspecio.tooltip.lodestone_compass.dimension",
+								Component.literal(globalPos.dimension().location().toString()).withStyle(ChatFormatting.GOLD))
+						.withStyle(ChatFormatting.GRAY));
 			}
 		}
 
 		int repairCost;
-		if (advancedTooltipsConfig.hasRepairCost() && (repairCost = this.getRepairCost()) != 0) {
-			tooltip.add(Text.translatable("inspecio.tooltip.repair_cost", repairCost)
-					.formatted(Formatting.GRAY));
+		if (advancedTooltipsConfig.hasRepairCost() && (repairCost = this.getBaseRepairCost()) != 0) {
+			tooltip.add(Component.translatable("inspecio.tooltip.repair_cost", repairCost)
+					.withStyle(ChatFormatting.GRAY));
 		}
 	}
 
-	@Inject(method = "getTooltipData", at = @At("RETURN"), cancellable = true)
-	private void getTooltipData(CallbackInfoReturnable<Optional<TooltipData>> info) {
+	@Inject(method = "getTooltipImage", at = @At("RETURN"), cancellable = true)
+	private void getTooltipData(CallbackInfoReturnable<Optional<TooltipComponent>> info) {
 		// Data is the plural and datum is the singular actually, but no one cares
-		var datas = new ArrayList<TooltipData>();
+		var datas = new ArrayList<TooltipComponent>();
 		info.getReturnValue().ifPresent(datas::add);
 
 		var config = Inspecio.getConfig();
 		var stack = (ItemStack) (Object) this;
 
-		if (stack.isFood()) {
-			var comp = stack.getItem().getFoodComponent();
+		if (stack.isEdible()) {
+			var comp = stack.getItem().getFoodProperties();
 
 			if (config.getFoodConfig().isEnabled()) {
 				datas.add(new FoodTooltipComponent(comp));
 			}
 
 			if (config.getEffectsConfig().hasPotions()) {
-				if (stack.isIn(Inspecio.HIDDEN_EFFECTS_TAG)) {
+				if (stack.is(Inspecio.HIDDEN_EFFECTS_TAG)) {
 					datas.add(new StatusEffectTooltipComponent());
 				} else {
-					if (comp.getStatusEffects().size() > 0) {
-						datas.add(new StatusEffectTooltipComponent(comp.getStatusEffects()));
+					if (comp.getEffects().size() > 0) {
+						datas.add(new StatusEffectTooltipComponent(comp.getEffects()));
 					} else if (stack.getItem() instanceof SuspiciousStewItem) {
-						var effects = new ArrayList<StatusEffectInstance>();
+						var effects = new ArrayList<MobEffectInstance>();
 						SuspiciousStewItemAccessor.invokeConsumeStatusEffects(stack, effects::add);
 
 						if (effects.size() != 0) {
 							datas.add(new StatusEffectTooltipComponent(effects, 1.f));
 						}
 					} else {
-						datas.add(new StatusEffectTooltipComponent(PotionUtil.getPotionEffects(stack), 1.f));
+						datas.add(new StatusEffectTooltipComponent(PotionUtils.getMobEffects(stack), 1.f));
 					}
 				}
 			}
@@ -146,7 +151,7 @@ public abstract class ItemStackMixin {
 			ArmorTooltipComponent.of(stack).ifPresent(datas::add);
 		}
 
-		if (stack.getItem() instanceof DecorationItem) {
+		if (stack.getItem() instanceof HangingEntityItem) {
 			PaintingTooltipComponent.of(stack).ifPresent(datas::add);
 		}
 
@@ -155,7 +160,7 @@ public abstract class ItemStackMixin {
 		} else if (datas.size() > 1) {
 			var comp = new CompoundTooltipComponent();
 			for (var data : datas) {
-				TooltipComponent component = TooltipComponentCallback.EVENT.invoker().getComponent(data);
+				ClientTooltipComponent component = TooltipComponentCallback.EVENT.invoker().getComponent(data);
 				if (component != null)
 					comp.addComponent(component);
 			}

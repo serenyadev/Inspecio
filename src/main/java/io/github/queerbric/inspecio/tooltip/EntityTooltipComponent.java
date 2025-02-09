@@ -17,29 +17,28 @@
 
 package io.github.queerbric.inspecio.tooltip;
 
-import com.mojang.blaze3d.lighting.DiffuseLighting;
+import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import io.github.queerbric.inspecio.InspecioConfig;
 import io.github.queerbric.inspecio.api.ConvertibleTooltipData;
 import io.github.queerbric.inspecio.mixin.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Bucketable;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.decoration.EndCrystalEntity;
-import net.minecraft.entity.passive.GoatEntity;
-import net.minecraft.entity.passive.PufferfishEntity;
-import net.minecraft.entity.passive.SquidEntity;
-import net.minecraft.entity.passive.TropicalFishEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.util.math.Axis;
-import net.minecraft.client.item.TooltipData;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.Bucketable;
+import net.minecraft.world.entity.animal.Pufferfish;
+import net.minecraft.world.entity.animal.Squid;
+import net.minecraft.world.entity.animal.TropicalFish;
+import net.minecraft.world.entity.animal.goat.Goat;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.entity.item.ItemEntity;
 
 /**
  * Represents a tooltip component for entities.
@@ -48,8 +47,8 @@ import net.minecraft.client.item.TooltipData;
  * @version 1.6.0
  * @since 1.0.0
  */
-public abstract class EntityTooltipComponent<C extends InspecioConfig.EntityConfig> implements ConvertibleTooltipData, TooltipComponent {
-	protected final MinecraftClient client = MinecraftClient.getInstance();
+public abstract class EntityTooltipComponent<C extends InspecioConfig.EntityConfig> implements ConvertibleTooltipData, ClientTooltipComponent {
+	protected final Minecraft client = Minecraft.getInstance();
 	protected final C config;
 
 	protected EntityTooltipComponent(C config) {
@@ -57,7 +56,7 @@ public abstract class EntityTooltipComponent<C extends InspecioConfig.EntityConf
 	}
 
 	@Override
-	public TooltipComponent toComponent() {
+	public ClientTooltipComponent toComponent() {
 		return this;
 	}
 
@@ -67,23 +66,23 @@ public abstract class EntityTooltipComponent<C extends InspecioConfig.EntityConf
 	}
 
 	@Override
-	public int getWidth(TextRenderer textRenderer) {
+	public int getWidth(Font textRenderer) {
 		return this.shouldRender() ? 24 : 0;
 	}
 
-	protected void renderEntity(MatrixStack matrices, int x, int y, Entity entity, int ageOffset, boolean spin, boolean allowCustomName) {
+	protected void renderEntity(PoseStack matrices, int x, int y, Entity entity, int ageOffset, boolean spin, boolean allowCustomName) {
 		this.renderEntity(matrices, x, y, entity, ageOffset, spin, allowCustomName, 180.f);
 	}
 
-	protected void renderEntity(MatrixStack matrices, int x, int y, Entity entity, int ageOffset, boolean spin, boolean allowCustomName, float defaultYaw) {
+	protected void renderEntity(PoseStack matrices, int x, int y, Entity entity, int ageOffset, boolean spin, boolean allowCustomName, float defaultYaw) {
 		float size = 24;
-		if (Math.max(entity.getWidth(), entity.getHeight()) > 1.0) {
-			size /= Math.max(entity.getWidth(), entity.getHeight());
+		if (Math.max(entity.getBbWidth(), entity.getBbHeight()) > 1.0) {
+			size /= Math.max(entity.getBbWidth(), entity.getBbHeight());
 		}
-		DiffuseLighting.setupFlatGuiLighting();
-		matrices.push();
+		Lighting.setupForFlatItems();
+		matrices.pushPose();
 		int yOffset = 16;
-		if (entity instanceof SquidEntity) {
+		if (entity instanceof Squid) {
 			size = 16;
 			yOffset = 2;
 		} else if (entity instanceof ItemEntity) {
@@ -98,55 +97,55 @@ public abstract class EntityTooltipComponent<C extends InspecioConfig.EntityConf
 		matrices.translate(0, 0, 1000);
 		matrices.scale(size, size, size);
 
-		var quaternion = Axis.Z_POSITIVE.rotationDegrees(180.f);
-		var quaternion2 = Axis.X_POSITIVE.rotationDegrees(-10.f);
+		var quaternion = Axis.ZP.rotationDegrees(180.f);
+		var quaternion2 = Axis.XP.rotationDegrees(-10.f);
 		quaternion.mul(quaternion2);
-		matrices.multiply(quaternion);
+		matrices.mulPose(quaternion);
 
 		if (this.client.cameraEntity != null) {
-			entity.setPos(this.client.cameraEntity.getX(), this.client.cameraEntity.getY(), this.client.cameraEntity.getZ());
+			entity.setPosRaw(this.client.cameraEntity.getX(), this.client.cameraEntity.getY(), this.client.cameraEntity.getZ());
 		}
-		this.setupAngles(entity, this.client.player.age, ageOffset, spin, defaultYaw);
+		this.setupAngles(entity, this.client.player.tickCount, ageOffset, spin, defaultYaw);
 
 		var entityRenderDispatcher = this.client.getEntityRenderDispatcher();
 		quaternion2.conjugate();
 		((CameraAccessor) entityRenderDispatcher.camera).setYaw(0f);
-		entity.setFireTicks(((EntityAccessor) entity).getHasVisualFire() ? 1 : entity.getFireTicks());
-		entityRenderDispatcher.setRotation(quaternion2);
+		entity.setRemainingFireTicks(((EntityAccessor) entity).getHasVisualFire() ? 1 : entity.getRemainingFireTicks());
+		entityRenderDispatcher.overrideCameraOrientation(quaternion2);
 
-		entityRenderDispatcher.setRenderShadows(false);
+		entityRenderDispatcher.setRenderShadow(false);
 
-		var immediate = this.client.getBufferBuilders().getEntityVertexConsumers();
+		var immediate = this.client.renderBuffers().bufferSource();
 		entity.setCustomNameVisible(allowCustomName && entity.hasCustomName() && (this.config.shouldAlwaysShowName() || Screen.hasControlDown()));
 
 		entityRenderDispatcher.render(entity, 0, 0, 0, 0.f, 1.f, matrices, immediate,
-				LightmapTextureManager.MAX_LIGHT_COORDINATE
+				LightTexture.FULL_BRIGHT
 		);
-		immediate.draw();
+		immediate.endBatch();
 
-		entityRenderDispatcher.setRenderShadows(true);
-		matrices.pop();
-		DiffuseLighting.setup3DGuiLighting();
+		entityRenderDispatcher.setRenderShadow(true);
+		matrices.popPose();
+		Lighting.setupFor3DItems();
 	}
 
 	protected void setupAngles(Entity entity, int age, int ageOffset, boolean spin, float defaultYaw) {
-		entity.age = age + ageOffset;
+		entity.tickCount = age + ageOffset;
 
 		float yaw = spin ? (float) (((System.currentTimeMillis() / 10) + ageOffset) % 360) : defaultYaw;
-		entity.setYaw(yaw);
-		entity.setHeadYaw(yaw);
-		entity.setPitch(0.f);
+		entity.setYRot(yaw);
+		entity.setYHeadRot(yaw);
+		entity.setXRot(0.f);
 		if (entity instanceof LivingEntity living) {
-			if (living instanceof GoatEntity) living.headYaw = yaw;
+			if (living instanceof Goat) living.yHeadRot = yaw;
 			else if (living instanceof WitherEntityAccessor wither) {
 				wither.getSideHeadYaws()[0] = wither.getSideHeadYaws()[1] = yaw;
 			}
-			living.bodyYaw = yaw;
+			living.yBodyRot = yaw;
 		} else if (entity instanceof ItemEntityAccessor itemEntity) {
-			itemEntity.setItemAge(entity.age);
+			itemEntity.setAge(entity.tickCount);
 			itemEntity.setUniqueOffset(0.f);
-		} else if (entity instanceof EndCrystalEntity endCrystal) {
-			endCrystal.endCrystalAge = endCrystal.age;
+		} else if (entity instanceof EndCrystal endCrystal) {
+			endCrystal.time = endCrystal.tickCount;
 		}
 	}
 
@@ -154,14 +153,14 @@ public abstract class EntityTooltipComponent<C extends InspecioConfig.EntityConf
 
 	protected abstract boolean shouldRenderCustomNames();
 
-	protected static void adjustEntity(Entity entity, NbtCompound itemNbt, InspecioConfig.EntitiesConfig config) {
+	protected static void adjustEntity(Entity entity, CompoundTag itemNbt, InspecioConfig.EntitiesConfig config) {
 		if (entity instanceof Bucketable bucketable) {
-			bucketable.copyDataFromNbt(itemNbt);
-			if (entity instanceof PufferfishEntity pufferfish) {
+			bucketable.loadFromBucketTag(itemNbt);
+			if (entity instanceof Pufferfish pufferfish) {
 				pufferfish.setPuffState(config.getPufferFishPuffState());
 			} else if (entity instanceof TropicalFishEntityAccessor tropicalFish) {
-				if (itemNbt.contains("BucketVariantTag", NbtElement.INT_TYPE)) {
-					tropicalFish.invokeSetVariantId(itemNbt.getInt(TropicalFishEntity.BUCKET_VARIANT_TAG_KEY));
+				if (itemNbt.contains("BucketVariantTag", Tag.TAG_INT)) {
+					tropicalFish.invokeSetVariantId(itemNbt.getInt(TropicalFish.BUCKET_VARIANT_TAG));
 				}
 			}
 		}

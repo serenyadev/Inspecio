@@ -18,14 +18,14 @@
 package io.github.queerbric.inspecio.mixin;
 
 import io.github.queerbric.inspecio.tooltip.SignTooltipComponent;
-import net.minecraft.block.Block;
-import net.minecraft.client.item.TooltipData;
-import net.minecraft.item.HangingSignItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.SignItem;
-import net.minecraft.item.WallStandingBlockItem;
-import net.minecraft.util.math.Direction;
 import net.fabricmc.api.Environment;
+import net.minecraft.core.Direction;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.HangingSignItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SignItem;
+import net.minecraft.world.item.StandingAndWallBlockItem;
+import net.minecraft.world.level.block.Block;
 import net.fabricmc.api.EnvType;
 import org.spongepowered.asm.mixin.Mixin;
 
@@ -33,13 +33,13 @@ import java.util.Optional;
 
 @Environment(EnvType.CLIENT)
 @Mixin(value = {SignItem.class, HangingSignItem.class})
-public class SignItemMixin extends WallStandingBlockItem {
-	public SignItemMixin(Block standingBlock, Block wallBlock, Settings settings, Direction direction) {
+public class SignItemMixin extends StandingAndWallBlockItem {
+	public SignItemMixin(Block standingBlock, Block wallBlock, Properties settings, Direction direction) {
 		super(standingBlock, wallBlock, settings, direction);
 	}
 
 	@Override
-	public Optional<TooltipData> getTooltipData(ItemStack stack) {
-		return SignTooltipComponent.fromItemStack(stack).or(() -> super.getTooltipData(stack));
+	public Optional<TooltipComponent> getTooltipImage(ItemStack stack) {
+		return SignTooltipComponent.fromItemStack(stack).or(() -> super.getTooltipImage(stack));
 	}
 }

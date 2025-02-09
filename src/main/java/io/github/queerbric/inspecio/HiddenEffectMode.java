@@ -27,10 +27,6 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.PrimitiveCodec;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -39,6 +35,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Represents the different hidden effect modes.
@@ -55,8 +55,8 @@ public enum HiddenEffectMode {
 		}
 
 		@Override
-		public MutableText stylize(MutableText text, boolean motion) {
-			return motion ? text.formatted(Formatting.OBFUSCATED) : text;
+		public MutableComponent stylize(MutableComponent text, boolean motion) {
+			return motion ? text.withStyle(ChatFormatting.OBFUSCATED) : text;
 		}
 	},
 	ENCHANTMENT {
@@ -66,13 +66,13 @@ public enum HiddenEffectMode {
 		}
 
 		@Override
-		public MutableText stylize(MutableText text, boolean motion) {
-			text = text.styled(style -> style.withFont(ALT_FONT_ID));
-			return motion ? text.formatted(Formatting.OBFUSCATED) : text;
+		public MutableComponent stylize(MutableComponent text, boolean motion) {
+			text = text.withStyle(style -> style.withFont(ALT_FONT_ID));
+			return motion ? text.withStyle(ChatFormatting.OBFUSCATED) : text;
 		}
 	};
 
-	private static final Identifier ALT_FONT_ID = new Identifier("minecraft", "alt");
+	private static final ResourceLocation ALT_FONT_ID = new ResourceLocation("minecraft", "alt");
 
 	public static final PrimitiveCodec<HiddenEffectMode> CODEC = new PrimitiveCodec<>() {
 		@Override
@@ -107,7 +107,7 @@ public enum HiddenEffectMode {
 	 * @param motion {@code true} if motion is allowed, or {@code false} otherwise
 	 * @return the stylized text
 	 */
-	public abstract MutableText stylize(MutableText text, boolean motion);
+	public abstract MutableComponent stylize(MutableComponent text, boolean motion);
 
 	/**
 	 * {@return the next available hidden effect mode}
@@ -135,7 +135,7 @@ public enum HiddenEffectMode {
 
 	public static class HiddenEffectType implements ArgumentType<HiddenEffectMode> {
 		private static final SimpleCommandExceptionType UNKNOWN_VALUE = new SimpleCommandExceptionType(
-				Text.translatable("inspecio.command.error.unknown_hidden_effect_mode"));
+				Component.translatable("inspecio.command.error.unknown_hidden_effect_mode"));
 		private static final List<HiddenEffectMode> VALUES = List.of(values());
 
 		private HiddenEffectType() {

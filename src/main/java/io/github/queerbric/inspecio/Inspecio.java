@@ -25,27 +25,27 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
-import net.minecraft.block.Block;
-import net.minecraft.block.DispenserBlock;
-import net.minecraft.block.HopperBlock;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.inventory.Inventories;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.text.Text;
-import net.minecraft.util.DyeColor;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.random.LegacySimpleRandom;
-import net.minecraft.util.random.RandomGenerator;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.level.block.HopperBlock;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.level.levelgen.LegacyRandomSource;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
@@ -62,11 +62,11 @@ import java.util.function.Consumer;
 public class Inspecio implements ClientModInitializer {
 	public static final String NAMESPACE = "inspecio";
 	private static final Logger LOGGER = LogManager.getLogger(NAMESPACE);
-	public static final TagKey<Item> HIDDEN_EFFECTS_TAG = TagKey.of(
-			RegistryKeys.ITEM, new Identifier(NAMESPACE, "hidden_effects")
+	public static final TagKey<Item> HIDDEN_EFFECTS_TAG = TagKey.create(
+			Registries.ITEM, new ResourceLocation(NAMESPACE, "hidden_effects")
 	);
-	public static final RandomGenerator COMMON_RANDOM = new LegacySimpleRandom(System.currentTimeMillis());
-	public static final Identifier GUI_ICONS_TEXTURE = new Identifier("textures/gui/icons.png");
+	public static final RandomSource COMMON_RANDOM = new LegacyRandomSource(System.currentTimeMillis());
+	public static final ResourceLocation GUI_ICONS_TEXTURE = new ResourceLocation("textures/gui/icons.png");
 	private static InspecioConfig config = InspecioConfig.defaultConfig();
 	private static ModContainer mod;
 
@@ -81,7 +81,7 @@ public class Inspecio implements ClientModInitializer {
 				if (blockItem.getBlock() instanceof ShulkerBoxBlock shulkerBoxBlock && ((InspecioConfig.ShulkerBoxConfig) config).hasColor())
 					color = shulkerBoxBlock.getColor();
 
-				var nbt = BlockItem.getBlockEntityNbtFromStack(stack);
+				var nbt = BlockItem.getBlockEntityData(stack);
 				if (nbt == null) return null;
 
 				var inventory = readInventory(nbt, getInvSizeFor(stack));
@@ -181,23 +181,23 @@ public class Inspecio implements ClientModInitializer {
 	 * @param block the block
 	 * @param tooltip the tooltip
 	 */
-	public static void appendBlockItemTooltip(ItemStack stack, Block block, List<Text> tooltip) {
+	public static void appendBlockItemTooltip(ItemStack stack, Block block, List<Component> tooltip) {
 		var config = Inspecio.getConfig().getContainersConfig().forBlock(block);
 		if (config != null && config.hasLootTable()) {
-			var blockEntityNbt = BlockItem.getBlockEntityNbtFromStack(stack);
+			var blockEntityNbt = BlockItem.getBlockEntityData(stack);
 			if (blockEntityNbt != null && blockEntityNbt.contains("LootTable")) {
-				tooltip.add(Text.translatable("inspecio.tooltip.loot_table",
-								Text.literal(blockEntityNbt.getString("LootTable"))
-										.formatted(Formatting.GOLD))
-						.formatted(Formatting.GRAY));
+				tooltip.add(Component.translatable("inspecio.tooltip.loot_table",
+								Component.literal(blockEntityNbt.getString("LootTable"))
+										.withStyle(ChatFormatting.GOLD))
+						.withStyle(ChatFormatting.GRAY));
 			}
 		}
 	}
 
-	public static void removeVanillaTooltips(List<Text> tooltips, int fromIndex) {
+	public static void removeVanillaTooltips(List<Component> tooltips, int fromIndex) {
 		if (fromIndex >= tooltips.size()) return;
 
-		int keepIndex = tooltips.indexOf(Text.empty());
+		int keepIndex = tooltips.indexOf(Component.empty());
 		if (keepIndex != -1) {
 			// we wanna keep tooltips that come after a line break
 			keepIndex++;
@@ -216,14 +216,14 @@ public class Inspecio implements ClientModInitializer {
 		tooltips.subList(fromIndex, tooltips.size()).clear();
 	}
 
-	public static @Nullable StatusEffectInstance getRawEffectFromTag(NbtCompound tag, String tagKey) {
+	public static @Nullable MobEffectInstance getRawEffectFromTag(CompoundTag tag, String tagKey) {
 		if (tag == null) {
 			return null;
 		}
-		if (tag.contains(tagKey, NbtElement.INT_TYPE)) {
-			var effect = StatusEffect.byRawId(tag.getInt(tagKey));
+		if (tag.contains(tagKey, Tag.TAG_INT)) {
+			var effect = MobEffect.byId(tag.getInt(tagKey));
 			if (effect != null)
-				return new StatusEffectInstance(effect, 200, 0);
+				return new MobEffectInstance(effect, 200, 0);
 		}
 		return null;
 	}
@@ -235,9 +235,9 @@ public class Inspecio implements ClientModInitializer {
 	 * @param size the size of the inventory
 	 * @return {@code null} if the inventory is empty, or the inventory otherwise
 	 */
-	public static @Nullable DefaultedList<ItemStack> readInventory(NbtCompound nbt, int size) {
-		var inventory = DefaultedList.ofSize(size, ItemStack.EMPTY);
-		Inventories.readNbt(nbt, inventory);
+	public static @Nullable NonNullList<ItemStack> readInventory(CompoundTag nbt, int size) {
+		var inventory = NonNullList.withSize(size, ItemStack.EMPTY);
+		ContainerHelper.loadAllItems(nbt, inventory);
 
 		boolean empty = true;
 		for (var item : inventory) {
